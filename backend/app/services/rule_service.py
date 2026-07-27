@@ -45,6 +45,14 @@ def upload_sigma_rule(file_path: str, db: Session):
     severity = rule_data.get("level")
     status = rule_data.get("status")
 
+    tags = rule_data.get("tags", [])
+    mitre_technique = None
+
+    for tag in tags:
+        if tag.startswith("attack.t"):
+           mitre_technique = tag.replace("attack.", "").upper()
+           break
+
     # Check duplicate
     existing_rule = (
         db.query(Rule)
@@ -62,14 +70,16 @@ def upload_sigma_rule(file_path: str, db: Session):
     query = json.dumps(rule_data.get("detection"))
 
     # Save to database
+   # Save to database
     new_rule = Rule(
-        rule_name=rule_name,
-        rule_type=rule_type,
-        severity=severity,
-        description=description,
-        query=query,
-        status=status
-    )
+    rule_name=rule_name,
+    rule_type=rule_type,
+    severity=severity,
+    description=description,
+    query=query,
+    status=status,
+    mitre_technique=mitre_technique
+)
 
     db.add(new_rule)
     db.commit()
@@ -97,7 +107,8 @@ def create_rule(db: Session, rule):
         severity=rule.severity,
         description=rule.description,
         query=rule.query,
-        status=rule.status
+        status=rule.status,
+        mitre_technique=rule.mitre_technique
     )
 
     db.add(new_rule)
@@ -127,6 +138,7 @@ def update_rule(
     rule.description = updated_rule.description
     rule.query = updated_rule.query
     rule.status = updated_rule.status
+    rule.mitre_technique = updated_rule.mitre_technique
 
     db.commit()
     db.refresh(rule)

@@ -4,6 +4,8 @@ import api from "../services/api";
 import VerdictTable from "../components/VerdictTable";
 import VerdictFilter from "../components/VerdictFilter";
 import Pagination from "../components/Pagination";
+import CoverageHeatmap from "../components/dashboard/CoverageHeatmap";
+import MitreMatrix from "../components/dashboard/MitreMatrix";
 
 interface Verdict {
   id: number;
@@ -168,6 +170,7 @@ function Dashboard() {
             totalPages={totalPages}
             onPageChange={setCurrentPage}
           />
+          <MitreMatrix />
         </>
       )}
     </div>

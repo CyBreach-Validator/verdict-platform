@@ -13,3 +13,5 @@ class Rule(Base):
     description = Column(Text)
     query = Column(Text, nullable=False)
     status = Column(String(20), default="Active")
+
+    mitre_technique = Column(String(20), nullable=True)

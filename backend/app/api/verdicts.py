@@ -16,6 +16,8 @@ from app.schemas.verdict_correction import (
 )
 
 from app.services.verdict_service import correct_verdict
+from app.schemas.causal_chain import CausalChainResponse
+from app.services.causal_chain_service import get_causal_chain
 
 router = APIRouter()
 
@@ -85,3 +87,25 @@ def correct_verdict_endpoint(
         )
 
     return verdict
+
+@router.get(
+    "/verdicts/{verdict_id}/chain",
+    response_model=CausalChainResponse
+)
+def verdict_chain(
+    verdict_id: int,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    chain = get_causal_chain(
+        db,
+        verdict_id
+    )
+
+    if not chain:
+        raise HTTPException(
+            status_code=404,
+            detail="Verdict not found"
+        )
+
+    return chain

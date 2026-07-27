@@ -8,6 +8,8 @@ class RuleCreate(BaseModel):
     description: str
     query: str
     status: str
+    mitre_technique: str
+
 
 
 class RuleUpdate(BaseModel):
@@ -17,6 +19,8 @@ class RuleUpdate(BaseModel):
     description: str
     query: str
     status: str
+    mitre_technique: str
+
 
 
 class RuleResponse(BaseModel):
@@ -27,6 +31,8 @@ class RuleResponse(BaseModel):
     description: str
     query: str
     status: str
+    mitre_technique: str
+
 
     class Config:
         from_attributes = True

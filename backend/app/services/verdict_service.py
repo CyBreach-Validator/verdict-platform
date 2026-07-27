@@ -110,6 +110,8 @@ def correct_verdict(
     db.commit()
     db.refresh(old_verdict)
 
+    print("Publishing corrected verdict to Kafka...")
+
     publish_corrected_verdict(
         {
             "id": corrected_verdict.id,

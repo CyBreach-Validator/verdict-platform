@@ -1,92 +1,136 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import api from "../services/api";
+import { Link, useParams } from "react-router-dom";
 
-interface Verdict {
-  id: number;
-  rule_id: number;
-  rule_name: string;
-  verdict: string;
-  event_data: string;
-  created_at: string;
-}
+import { getVerdict } from "../services/verdictService";
+import type { VerdictDetails } from "../services/verdictService";
+import CausalChain from "../components/verdicts/CausalChain";
 
-function VerdictDetails() {
+export default function VerdictDetailsPage() {
   const { id } = useParams();
-  const navigate = useNavigate();
 
-  const [verdict, setVerdict] = useState<Verdict | null>(null);
+  const [verdict, setVerdict] =
+    useState<VerdictDetails | null>(null);
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api
-      .get(`/verdicts/${id}`)
-      .then((response) => {
-        setVerdict(response.data);
+     console.log("VerdictDetails mounted");
+     console.log("Route ID:", id);
+    
+     if (!id) return;
+
+    getVerdict(Number(id))
+      .then((data) => {
+        setVerdict(data);
         setLoading(false);
       })
-      .catch((error) => {
-        console.error("Error fetching verdict:", error);
+      .catch((err) => {
+        console.error(err);
         setLoading(false);
       });
   }, [id]);
 
   if (loading) {
-    return <p>Loading verdict details...</p>;
+    return <h2>Loading...</h2>;
   }
 
   if (!verdict) {
-    return <p>Verdict not found.</p>;
+    return <h2>Verdict not found.</h2>;
   }
 
   return (
-    <div style={{ padding: "30px" }}>
-      <h1>Verdict Details</h1>
+    <div style={{ padding: 30 }}>
 
-      <button
-        onClick={() => navigate("/dashboard")}
+      <Link to="/dashboard">
+        ← Back to Dashboard
+      </Link>
+
+      <h1 style={{ marginTop: 20 }}>
+        Verdict Details
+      </h1>
+
+      <table
         style={{
-          marginBottom: "20px",
-          padding: "8px 16px",
-          cursor: "pointer",
+          borderCollapse: "collapse",
+          width: "100%",
+          marginTop: 20,
         }}
       >
-        Back to Dashboard
-      </button>
+        <tbody>
+          <tr>
+            <td><b>ID</b></td>
+            <td>{verdict.id}</td>
+          </tr>
 
-      <div
+          <tr>
+            <td><b>Rule Name</b></td>
+            <td>{verdict.rule_name}</td>
+          </tr>
+
+          <tr>
+            <td><b>Rule ID</b></td>
+            <td>{verdict.rule_id}</td>
+          </tr>
+
+          <tr>
+            <td><b>Verdict</b></td>
+            <td>{verdict.verdict}</td>
+          </tr>
+
+          <tr>
+            <td><b>Verdict Hash</b></td>
+            <td
+              style={{
+                wordBreak: "break-all",
+              }}
+            >
+              {verdict.verdict_hash}
+            </td>
+          </tr>
+
+          <tr>
+            <td><b>Superseded</b></td>
+            <td>
+              {verdict.is_superseded ? "Yes" : "No"}
+            </td>
+          </tr>
+
+          <tr>
+            <td><b>Superseded By</b></td>
+            <td>
+              {verdict.superseded_by ?? "-"}
+            </td>
+          </tr>
+
+          <tr>
+            <td><b>Created At</b></td>
+            <td>
+              {new Date(
+                verdict.created_at
+              ).toLocaleString()}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 style={{ marginTop: 30 }}>
+        Event Data
+      </h2>
+
+      <pre
         style={{
-          border: "1px solid #ccc",
-          borderRadius: "8px",
-          padding: "20px",
-          maxWidth: "700px",
+          background: "#f5f5f5",
+          padding: 20,
+          borderRadius: 8,
         }}
       >
-        <p><strong>ID:</strong> {verdict.id}</p>
-
-        <p><strong>Rule ID:</strong> {verdict.rule_id}</p>
-
-        <p><strong>Rule Name:</strong> {verdict.rule_name}</p>
-
-        <p><strong>Verdict:</strong> {verdict.verdict}</p>
-
-        <p><strong>Created At:</strong> {new Date(verdict.created_at).toLocaleString()}</p>
-
-        <p><strong>Event Data:</strong></p>
-
-        <pre
-           style={{
-              background: "#f4f4f4",
-              padding: "15px",
-              borderRadius: "5px",
-              overflowX: "auto",
-            }}
-          >
-            {JSON.stringify(JSON.parse(verdict.event_data), null, 2)}
-         </pre>
-      </div>
+        {JSON.stringify(
+          JSON.parse(verdict.event_data),
+          null,
+          2
+        )}
+      </pre>
+      <CausalChain verdictId={verdict.id} />
     </div>
   );
 }
-
-export default VerdictDetails;

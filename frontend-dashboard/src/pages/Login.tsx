@@ -14,11 +14,19 @@ function Login() {
     try {
       const data = await login(username, password);
 
-      localStorage.setItem("access_token", data.access_token);
+  console.log("Login response:", data);
+  console.log("Access token:", data.access_token);
 
-      alert("Login Successful!");
+  localStorage.setItem("access_token", data.access_token);
 
-      navigate("/dashboard");
+  console.log(
+    "After storing:",
+    localStorage.getItem("access_token")
+  );
+  
+  alert("Login Successful!");
+
+     navigate("/dashboard");
     } catch (error) {
       alert("Invalid Username or Password");
       console.error(error);

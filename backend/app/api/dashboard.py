@@ -6,6 +6,7 @@ from app.database.database import get_db
 from app.models.rule import Rule
 from app.models.verdict import Verdict
 from app.schemas.dashboard import DashboardStats
+from app.services.dashboard_service import get_detection_coverage
 
 router = APIRouter()
 
@@ -38,3 +39,7 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
         detected=detected,
         missed=missed
     )
+
+@router.get("/dashboard/coverage")
+def dashboard_coverage(db: Session = Depends(get_db)):
+    return get_detection_coverage(db)
