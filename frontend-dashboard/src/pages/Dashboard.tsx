@@ -6,6 +6,7 @@ import VerdictFilter from "../components/VerdictFilter";
 import Pagination from "../components/Pagination";
 import CoverageHeatmap from "../components/dashboard/CoverageHeatmap";
 import MitreMatrix from "../components/dashboard/MitreMatrix";
+import ConnectorStatusCard from "../components/dashboard/ConnectorStatusCard";
 
 interface Verdict {
   id: number;
@@ -148,7 +149,7 @@ function Dashboard() {
           <h1 style={{ color: "orange" }}>{partialCount}</h1>
         </div>
       </div>
-
+      <ConnectorStatusCard />
       <h2>Verdicts</h2>
 
       <VerdictFilter
