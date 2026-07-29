@@ -7,6 +7,7 @@ from app.api.users import router as user_router
 from app.api.rules import router as rule_router
 from app.api.verdicts import router as verdict_router
 from app.api.dashboard import router as dashboard_router
+from app.api.connectors import router as connector_router
 from app.api.validator import router as validator_router
 from app.api import auth
 from fastapi.middleware.cors import CORSMiddleware
@@ -35,6 +36,7 @@ app.include_router(user_router)
 app.include_router(rule_router)
 app.include_router(verdict_router)
 app.include_router(dashboard_router)
+app.include_router(connector_router)
 app.include_router(validator_router)
 app.include_router(auth.router)
 
