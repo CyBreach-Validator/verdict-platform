@@ -1,8 +1,8 @@
-"""add mitre technique to rules
+"""add connectors table
 
-Revision ID: dd2cbf99c602
-Revises: d0fbb8700f1d
-Create Date: 2026-07-24 16:56:44.987971
+Revision ID: dc17eb937333
+Revises: cbf3cdf06b8f
+Create Date: 2026-07-29 11:34:15.710483
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'dd2cbf99c602'
-down_revision: Union[str, Sequence[str], None] = 'd0fbb8700f1d'
+revision: str = 'dc17eb937333'
+down_revision: Union[str, Sequence[str], None] = 'cbf3cdf06b8f'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
