@@ -7,6 +7,7 @@ import Pagination from "../components/Pagination";
 import CoverageHeatmap from "../components/dashboard/CoverageHeatmap";
 import MitreMatrix from "../components/dashboard/MitreMatrix";
 import ConnectorStatusCard from "../components/dashboard/ConnectorStatusCard";
+import websocketService from "../services/websocketService";
 
 interface Verdict {
   id: number;
@@ -38,6 +39,52 @@ function Dashboard() {
         setLoading(false);
       });
   }, []);
+
+  useEffect(() => {
+
+  websocketService.connect(
+
+    (data) => {
+
+  console.log("📩 WebSocket Message:", data);
+
+  setVerdicts((previousVerdicts) => {
+
+    const alreadyExists = previousVerdicts.some(
+      (v) => v.id === data.id
+    );
+
+    if (alreadyExists) {
+      return previousVerdicts;
+    }
+
+    return [data, ...previousVerdicts];
+
+  });
+
+},
+
+    () => {
+
+      console.log("🟢 Connected");
+
+    },
+
+    () => {
+
+      console.log("🔴 Disconnected");
+
+    }
+
+  );
+
+  return () => {
+
+    websocketService.disconnect();
+
+  };
+
+}, []);
 
   const handleLogout = () => {
     localStorage.removeItem("access_token");
