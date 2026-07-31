@@ -1,9 +1,6 @@
 import api from "./api";
 
-export const login = async (
-  username: string,
-  password: string
-) => {
+export const login = async (username: string, password: string) => {
   const formData = new URLSearchParams();
 
   formData.append("username", username);
@@ -18,6 +15,8 @@ export const login = async (
       },
     }
   );
+
+  console.log("AUTH RESPONSE:", response);
 
   return response.data;
 };

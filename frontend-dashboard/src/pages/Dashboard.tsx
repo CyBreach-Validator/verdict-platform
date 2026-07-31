@@ -8,6 +8,7 @@ import CoverageHeatmap from "../components/dashboard/CoverageHeatmap";
 import MitreMatrix from "../components/dashboard/MitreMatrix";
 import ConnectorStatusCard from "../components/dashboard/ConnectorStatusCard";
 import websocketService from "../services/websocketService";
+import { exportCSV, exportPDF } from "../services/exportService";
 
 interface Verdict {
   id: number;
@@ -206,6 +207,34 @@ function Dashboard() {
           setCurrentPage(1); // Reset to first page when filter changes
         }}
       />
+
+      <div
+  style={{
+    marginBottom: "20px",
+    display: "flex",
+    gap: "10px",
+  }}
+>
+  <button
+    onClick={exportCSV}
+    style={{
+      padding: "8px 16px",
+      cursor: "pointer",
+    }}
+  >
+    Export CSV
+  </button>
+
+  <button
+    onClick={exportPDF}
+    style={{
+      padding: "8px 16px",
+      cursor: "pointer",
+    }}
+  >
+    Export PDF
+  </button>
+</div>
 
       {loading ? (
         <p>Loading...</p>

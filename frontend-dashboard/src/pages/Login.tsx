@@ -14,22 +14,31 @@ function Login() {
     try {
       const data = await login(username, password);
 
-  console.log("Login response:", data);
-  console.log("Access token:", data.access_token);
+      console.log("Login response:", data);
+      console.log("Access token:", data.access_token);
 
-  localStorage.setItem("access_token", data.access_token);
+      localStorage.setItem("access_token", data.access_token);
 
-  console.log(
-    "After storing:",
-    localStorage.getItem("access_token")
-  );
-  
-  alert("Login Successful!");
+      console.log(
+        "After storing:",
+        localStorage.getItem("access_token")
+      );
 
-     navigate("/dashboard");
-    } catch (error) {
-      alert("Invalid Username or Password");
-      console.error(error);
+      alert("Login Successful!");
+
+      navigate("/dashboard");
+
+    } catch (error: any) {
+      console.error("Login Error:", error);
+
+      if (error.response) {
+        console.error("Status:", error.response.status);
+        console.error("Data:", error.response.data);
+      } else {
+        console.error("Message:", error.message);
+      }
+
+      alert("Login Failed");
     }
   };
 

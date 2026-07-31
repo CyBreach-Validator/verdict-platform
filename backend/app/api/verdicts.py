@@ -18,6 +18,13 @@ from app.schemas.verdict_correction import (
 from app.services.verdict_service import correct_verdict
 from app.schemas.causal_chain import CausalChainResponse
 from app.services.causal_chain_service import get_causal_chain
+from fastapi.responses import FileResponse
+
+from app.models.verdict import Verdict
+from app.services.export_service import (
+    generate_csv,
+    generate_pdf,
+)
 
 router = APIRouter()
 
@@ -46,6 +53,35 @@ def get_verdict(
 
     return verdict
 
+@router.get("/verdicts/export/csv")
+def export_verdicts_csv(
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    verdicts = db.query(Verdict).all()
+
+    file_path = generate_csv(verdicts)
+
+    return FileResponse(
+        path=file_path,
+        filename="verdicts.csv",
+        media_type="text/csv",
+    )
+
+@router.get("/verdicts/export/pdf")
+def export_verdicts_pdf(
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    verdicts = db.query(Verdict).all()
+
+    file_path = generate_pdf(verdicts)
+
+    return FileResponse(
+        path=file_path,
+        filename="verdicts.pdf",
+        media_type="application/pdf",
+    )
 
 @router.get("/verdicts/rule/{rule_id}", response_model=list[VerdictResponse])
 def get_verdicts_by_rule(
