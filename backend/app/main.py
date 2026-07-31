@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.database.database import engine
 from app.database.base import Base
@@ -10,17 +11,19 @@ from app.api.dashboard import router as dashboard_router
 from app.api.connectors import router as connector_router
 from app.api.validator import router as validator_router
 from app.api import auth
-from fastapi.middleware.cors import CORSMiddleware
+
+from app.websocket.connection_manager import manager
 
 app = FastAPI(
     title="CyBreach Validator API"
 )
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
-        "http://localhost:5174",
         "http://127.0.0.1:5173",
+        "http://localhost:5174",
         "http://127.0.0.1:5174",
     ],
     allow_credentials=True,
@@ -28,10 +31,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Create all database tables
 Base.metadata.create_all(bind=engine)
 
-# Register routers
 app.include_router(user_router)
 app.include_router(rule_router)
 app.include_router(verdict_router)
@@ -39,6 +40,34 @@ app.include_router(dashboard_router)
 app.include_router(connector_router)
 app.include_router(validator_router)
 app.include_router(auth.router)
+
+
+@app.websocket("/ws/verdicts")
+async def websocket_endpoint(websocket: WebSocket):
+
+    print("🔥 WebSocket endpoint reached")
+
+    await manager.connect(websocket)
+
+    print("✅ Dashboard Connected")
+
+    try:
+        while True:
+            message = await websocket.receive_text()
+
+            print(f"Received: {message}")
+
+            await websocket.send_json(
+                {
+                    "type": "heartbeat",
+                    "message": "Connection Successful",
+                }
+            )
+
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+        print("❌ Dashboard Disconnected")
+
 
 @app.get("/")
 def root():

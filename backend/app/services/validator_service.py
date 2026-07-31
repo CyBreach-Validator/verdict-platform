@@ -6,6 +6,8 @@ def validate_rule(rule_query: str, event: dict):
     Validates whether an event matches the Sigma detection rule.
     Returns a detailed verdict.
     """
+    print("rule_query:", repr(rule_query))
+    detection = json.loads(rule_query)
 
     detection = json.loads(rule_query)
 
