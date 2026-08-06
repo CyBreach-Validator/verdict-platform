@@ -8,6 +8,7 @@ import shutil
 from app.database.database import get_db
 from app.schemas.rule import RuleCreate, RuleUpdate, RuleResponse
 from app.schemas.validator import ValidationRequest
+from app.models.rule import Rule
 
 from app.services.rule_service import (
     upload_sigma_rule,
@@ -37,6 +38,31 @@ current_user: str = Depends(get_current_user)
 ):
     return get_all_rules(db)
 
+@router.get("/rules/search")
+def search_rules(
+    q: str = "",
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    all_rules = db.query(Rule).all()
+
+    print("========== SEARCH DEBUG ==========")
+    print("Query:", q)
+    print("Total rules:", len(all_rules))
+
+    for rule in all_rules:
+        print(rule.id, rule.rule_name)
+
+    results = (
+        db.query(Rule)
+        .filter(Rule.rule_name.ilike(f"%{q}%"))
+        .all()
+    )
+
+    print("Matched:", len(results))
+    print("==================================")
+
+    return results
 
 @router.get("/rules/{rule_id}", response_model=RuleResponse)
 def get_rule(
@@ -73,6 +99,27 @@ def update_rule(
             status_code=404,
             detail="Rule not found"
         )
+
+    return rule
+
+@router.put("/rules/{rule_id}/approve")
+def approve_rule(
+    rule_id: int,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    rule = db.query(Rule).filter(Rule.id == rule_id).first()
+
+    if not rule:
+        raise HTTPException(
+            status_code=404,
+            detail="Rule not found"
+        )
+
+    rule.status = "Approved"
+
+    db.commit()
+    db.refresh(rule)
 
     return rule
 
@@ -152,3 +199,46 @@ def validate_rule_endpoint(
         )
 
     return result
+
+@router.put("/rules/{rule_id}/approve")
+def approve_rule(
+    rule_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    rule = db.query(Rule).filter(Rule.id == rule_id).first()
+
+    if not rule:
+        raise HTTPException(status_code=404, detail="Rule not found")
+
+    rule.status = "Approved"
+
+    db.commit()
+    db.refresh(rule)
+
+    return rule    
+
+@router.get("/rules/{rule_id}/compare")
+def compare_rule(rule_id: int, db: Session = Depends(get_db)):
+    current = db.query(Rule).filter(Rule.id == rule_id).first()
+
+    if not current:
+        raise HTTPException(status_code=404, detail="Rule not found")
+
+    # Temporary demo data
+    proposed = {
+        "title": "Suspicious PowerShell",
+        "query": 'Image="powershell.exe" AND Parent="cmd.exe"',
+        "severity": "High",
+        "status": "Pending"
+    }
+
+    return {
+    "current": {
+        "title": current.rule_name,
+        "query": current.query,
+        "severity": current.severity,
+        "status": current.status,
+    },
+    "proposed": proposed,
+}

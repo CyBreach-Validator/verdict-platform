@@ -12,6 +12,6 @@ class Rule(Base):
     severity = Column(String(50), nullable=False)
     description = Column(Text)
     query = Column(Text, nullable=False)
-    status = Column(String(20), default="Active")
+    status = Column(String(20), default="Pending")
 
     mitre_technique = Column(String(20), nullable=True)

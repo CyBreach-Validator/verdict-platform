@@ -38,9 +38,8 @@ def create_access_token(data: dict):
 
 
 def verify_access_token(token: str):
-    """
-    Verify JWT access token.
-    """
+    print("========== JWT DEBUG ==========")
+    print("Received Token:", token)
 
     try:
         payload = jwt.decode(
@@ -49,9 +48,12 @@ def verify_access_token(token: str):
             algorithms=[ALGORITHM]
         )
 
+        print("Decoded Payload:", payload)
+
         username = payload.get("sub")
 
         if username is None:
+            print("No 'sub' found in token")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token"
@@ -59,7 +61,8 @@ def verify_access_token(token: str):
 
         return payload
 
-    except JWTError:
+    except JWTError as e:
+        print("JWT Error:", str(e))
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token is invalid or expired"
