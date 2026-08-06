@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
+from app.middleware.rate_limit import limiter
 
 from app.database.database import get_db
 from app.schemas.verdict import VerdictResponse
@@ -30,20 +31,13 @@ router = APIRouter()
 
 
 @router.get("/verdicts", response_model=list[VerdictResponse])
+@limiter.limit("5/minute")   # Use 5/minute for testing
 def get_verdicts(
+    request: Request,
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user)
 ):
     return get_all_verdicts(db)
-
-
-@router.get("/verdicts/{verdict_id}", response_model=VerdictResponse)
-def get_verdict(
-    verdict_id: int,
-    db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
-):
-    verdict = get_verdict_by_id(db, verdict_id)
 
     if not verdict:
         raise HTTPException(
@@ -54,7 +48,9 @@ def get_verdict(
     return verdict
 
 @router.get("/verdicts/export/csv")
+@limiter.limit("5/minute")
 def export_verdicts_csv(
+    request: Request,
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user)
 ):
@@ -69,7 +65,9 @@ def export_verdicts_csv(
     )
 
 @router.get("/verdicts/export/pdf")
+@limiter.limit("5/minute")
 def export_verdicts_pdf(
+    request: Request,
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user)
 ):

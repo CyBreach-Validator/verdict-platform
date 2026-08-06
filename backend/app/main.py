@@ -14,9 +14,19 @@ from app.api import auth
 
 from app.websocket.connection_manager import manager
 
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi import _rate_limit_exceeded_handler
+
+from app.middleware.rate_limit import limiter
+
 app = FastAPI(
     title="CyBreach Validator API"
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
