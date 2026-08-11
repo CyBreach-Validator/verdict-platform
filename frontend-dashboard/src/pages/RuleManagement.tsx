@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../services/api";
 import RuleComparison from "../components/rules/RuleComparison";
 
 interface Rule {
@@ -10,59 +10,46 @@ interface Rule {
   status: string;
 }
 
-const API_URL = "http://127.0.0.1:8033";
-
 export default function RuleManagement() {
   const [rules, setRules] = useState<Rule[]>([]);
   const [search, setSearch] = useState("");
-
   const [selectedRuleId, setSelectedRuleId] = useState<number | null>(null);
 
   const token = localStorage.getItem("access_token");
+
   console.log("Token from localStorage:", token);
 
   const fetchRules = async () => {
-  try {
-    console.log("Token:", token);
+    try {
+      console.log("Fetching rules...");
 
-    const config = {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    };
+      const response = await api.get(
+        `/rules/search?q=${encodeURIComponent(search)}`
+      );
 
-    console.log("Request Config:", config);
+      console.log("Rules response:", response.data);
 
-    const response = await axios.get(
-      `${API_URL}/rules/search?q=${search}`,
-      config
-    );
-
-    console.log("Response:", response.data);
-
-    setRules(response.data);
-  } catch (err: any) {
-    console.log("Status:", err.response?.status);
-    console.log("Response:", err.response?.data);
-    console.log("Headers Sent:", err.config?.headers);
-  }
-};
+      setRules(response.data);
+    } catch (err: any) {
+      console.error("Failed to fetch rules");
+      console.error("Status:", err.response?.status);
+      console.error("Response:", err.response?.data);
+    }
+  };
 
   const approveRule = async (id: number) => {
     try {
-      await axios.put(
-        `${API_URL}/rules/${id}/approve`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      console.log("Approving rule:", id);
+
+      await api.put(`/rules/${id}/approve`, {});
+
+      console.log("Rule approved successfully");
 
       fetchRules();
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error("Failed to approve rule");
+      console.error("Status:", err.response?.status);
+      console.error("Response:", err.response?.data);
     }
   };
 
@@ -105,42 +92,50 @@ export default function RuleManagement() {
         <tbody>
           {rules.map((rule) => (
             <tr key={rule.id}>
-              <td className="border p-2">{rule.rule_name}</td>
-              <td className="border p-2">{rule.rule_type}</td>
-              <td className="border p-2">{rule.severity}</td>
+              <td className="border p-2">
+                {rule.rule_name}
+              </td>
+
+              <td className="border p-2">
+                {rule.rule_type}
+              </td>
+
+              <td className="border p-2">
+                {rule.severity}
+              </td>
 
               <td className="border p-2">
                 {rule.status}
               </td>
 
               <td className="border p-2">
-               <div className="flex gap-2">
-                <button
-                   className="bg-blue-600 text-white px-3 py-1 rounded"
-                   onClick={() => {
-                     console.log("Compare clicked:", rule.id);
-                     setSelectedRuleId(rule.id);
-                   }}
-                 >
-                   Compare
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    className="bg-blue-600 text-white px-3 py-1 rounded"
+                    onClick={() => {
+                      console.log("Compare clicked:", rule.id);
+                      setSelectedRuleId(rule.id);
+                    }}
+                  >
+                    Compare
+                  </button>
 
-               {rule.status === "Pending" ? (
-                 <button
-                  className="bg-green-600 text-white px-3 py-1 rounded"
-                  onClick={() => approveRule(rule.id)}
-                >
-                  Approve
-                </button>
-              ) : (
-                <span>-</span>
-               )}
-              </div>
-            </td>
+                  {rule.status === "Pending" ? (
+                    <button
+                      className="bg-green-600 text-white px-3 py-1 rounded"
+                      onClick={() => approveRule(rule.id)}
+                    >
+                      Approve
+                    </button>
+                  ) : (
+                    <span>-</span>
+                  )}
+                </div>
+              </td>
             </tr>
           ))}
         </tbody>
-            </table>
+      </table>
 
       {selectedRuleId && (
         <RuleComparison ruleId={selectedRuleId} />

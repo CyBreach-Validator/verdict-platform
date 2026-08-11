@@ -48,7 +48,7 @@ def get_verdicts(
     return verdict
 
 @router.get("/verdicts/export/csv")
-@limiter.limit("5/minute")
+@limiter.limit("100/minute")
 def export_verdicts_csv(
     request: Request,
     db: Session = Depends(get_db),
