@@ -5,6 +5,7 @@ from app.middleware.rate_limit import limiter
 from app.database.database import get_db
 from app.schemas.verdict import VerdictResponse
 from app.security.security import get_current_user
+from app.services.revalidation_service import revalidate_verdict
 
 from app.services.verdict_service import (
     get_all_verdicts,
@@ -38,6 +39,25 @@ def get_verdicts(
     current_user: str = Depends(get_current_user)
 ):
     return get_all_verdicts(db)
+
+@router.get(
+    "/verdicts/{verdict_id}",
+    response_model=VerdictResponse
+)
+def get_verdict(
+    verdict_id: int,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    verdict = get_verdict_by_id(db, verdict_id)
+
+    if not verdict:
+        raise HTTPException(
+            status_code=404,
+            detail="Verdict not found."
+        )
+
+    return verdict
 
     if not verdict:
         raise HTTPException(
@@ -143,3 +163,22 @@ def verdict_chain(
         )
 
     return chain
+
+@router.post("/verdicts/{verdict_id}/revalidate")
+def revalidate_verdict_endpoint(
+    verdict_id: int,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    result = revalidate_verdict(
+        db=db,
+        verdict_id=verdict_id
+    )
+
+    if not result:
+        raise HTTPException(
+            status_code=404,
+            detail="Verdict or associated rule not found."
+        )
+
+    return result
