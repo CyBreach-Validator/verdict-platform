@@ -4,6 +4,7 @@ import Login from "../pages/Login";
 import Dashboard from "../pages/Dashboard";
 import VerdictDetails from "../pages/VerdictDetails";
 import RuleManagement from "../pages/RuleManagement";
+import RevalidationDashboard from "../pages/RevalidationDashboard";
 
 function AppRoutes() {
   return (
@@ -13,9 +14,15 @@ function AppRoutes() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/verdicts/:id" element={<VerdictDetails />} />
         <Route path="/rules" element={<RuleManagement />} />
+        <Route
+          path="/revalidation"
+          element={<RevalidationDashboard />}
+        />
 
-        {/* Keep this LAST */}
-        <Route path="*" element={<Navigate to="/" />} />
+        <Route
+          path="*"
+          element={<Navigate to="/" />}
+        />
       </Routes>
     </BrowserRouter>
   );

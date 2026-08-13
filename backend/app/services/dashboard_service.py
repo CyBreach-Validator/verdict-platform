@@ -101,3 +101,66 @@ def get_detection_coverage(db: Session):
 
 
     return result
+
+from app.models.audit_log import AuditLog
+
+
+def get_revalidation_dashboard(db: Session):
+    records = (
+        db.query(AuditLog)
+        .filter(AuditLog.action == "REVALIDATED")
+        .order_by(AuditLog.created_at.asc())
+        .all()
+    )
+
+    result = []
+
+    for record in records:
+        delta = 0
+        improved = False
+        gap_closed = False
+
+        if record.details:
+            try:
+                import json
+
+                details = json.loads(record.details)
+
+                delta = details.get("delta", 0)
+                improved = details.get("improved", False)
+                gap_closed = details.get("gap_closed", False)
+
+            except (TypeError, json.JSONDecodeError):
+                pass
+
+        result.append(
+            {
+                "id": record.id,
+                "verdict_id": record.verdict_id,
+                "related_verdict_id": record.related_verdict_id,
+                "rule_id": record.rule_id,
+                "rule_name": record.rule_name,
+                "old_verdict": record.old_verdict,
+                "new_verdict": record.new_verdict,
+                "delta": delta,
+                "improved": improved,
+                "gap_closed": gap_closed,
+                "verdict_hash": record.verdict_hash,
+                "created_at": record.created_at,
+            }
+        )
+
+    total = len(result)
+    improved_count = sum(
+        1 for item in result if item["improved"]
+    )
+    gap_closed_count = sum(
+        1 for item in result if item["gap_closed"]
+    )
+
+    return {
+        "total_revalidations": total,
+        "improved": improved_count,
+        "gap_closed": gap_closed_count,
+        "history": result,
+    }

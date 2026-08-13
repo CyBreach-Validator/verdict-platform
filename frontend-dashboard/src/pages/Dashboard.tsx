@@ -247,6 +247,9 @@ function Dashboard() {
             totalPages={totalPages}
             onPageChange={setCurrentPage}
           />
+
+          <CoverageHeatmap />
+
           <MitreMatrix />
         </>
       )}

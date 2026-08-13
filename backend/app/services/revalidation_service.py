@@ -7,6 +7,7 @@ from app.models.verdict import Verdict
 from app.services.validator_service import validate_rule
 from app.utils.hash_utils import generate_verdict_hash
 from app.kafka.producer import publish_corrected_verdict
+from app.services.audit_log_service import create_audit_log
 
 
 def revalidate_verdict(
@@ -119,6 +120,24 @@ def revalidate_verdict(
     gap_closed = (
         old_verdict.verdict == "Missed"
         and new_verdict.verdict == "Detected"
+    )
+
+    create_audit_log(
+        db=db,
+        action="REVALIDATED",
+        verdict_id=new_verdict.id,
+        related_verdict_id=old_verdict.id,
+        rule_id=rule.id,
+        rule_name=rule.rule_name,
+        old_verdict=old_verdict.verdict,
+        new_verdict=new_verdict.verdict,
+        verdict_hash=new_verdict.verdict_hash,
+        details={
+            "delta": delta,
+            "improved": improved,
+            "gap_closed": gap_closed,
+            "revalidation": True,
+        },
     )
 
     return {

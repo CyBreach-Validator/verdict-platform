@@ -9,6 +9,7 @@ from app.database.database import Base
 from app.models.user import User
 from app.models.rule import Rule
 from app.models.verdict import Verdict
+from app.models.audit_log import AuditLog
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

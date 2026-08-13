@@ -6,6 +6,9 @@ export interface CoverageItem {
   tactic: string;
   rule_name: string;
   status: string;
+  detected: number;
+  missed: number;
+  partial: number;
 }
 
 export const getDetectionCoverage = async (): Promise<CoverageItem[]> => {
