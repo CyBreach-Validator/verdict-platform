@@ -2,7 +2,16 @@ _format_version: "3.0"
 
 services:
   - name: backend-service
-    url: http://host.docker.internal:8033
+    url: http://host.docker.internal:8000
+
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 5
+          policy: local
+          limit_by: ip
+          fault_tolerant: true
+          hide_client_headers: false
 
     routes:
       - name: root-route
@@ -14,6 +23,11 @@ services:
       - name: health-route
         paths:
           - /health
+        strip_path: false
+
+      - name: auth-route
+        paths:
+          - /auth
         strip_path: false
 
       - name: users-route
@@ -29,4 +43,9 @@ services:
       - name: verdicts-route
         paths:
           - /verdicts
+        strip_path: false
+
+      - name: audit-logs-route
+        paths:
+          - /audit-logs
         strip_path: false
