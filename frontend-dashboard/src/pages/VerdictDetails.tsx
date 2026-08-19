@@ -12,6 +12,7 @@ import type {
 } from "../services/verdictService";
 
 import CausalChain from "../components/verdicts/CausalChain";
+import VerdictTimeline from "../components/verdicts/VerdictTimeline";
 
 export default function VerdictDetailsPage() {
   const { id } = useParams();
@@ -350,6 +351,11 @@ export default function VerdictDetailsPage() {
           2
         )}
       </pre>
+
+      <VerdictTimeline
+        verdict={verdict}
+        revalidationResult={revalidationResult}
+      />
 
       <CausalChain verdictId={verdict.id} />
     </div>
