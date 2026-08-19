@@ -6,7 +6,10 @@ from app.models.rule import Rule
 from app.models.verdict import Verdict
 from app.services.validator_service import validate_rule
 from app.utils.hash_utils import generate_verdict_hash
-from app.kafka.producer import publish_corrected_verdict
+from app.kafka.producer import (
+    publish_corrected_verdict,
+    publish_gap_closed_event
+)
 from app.services.audit_log_service import create_audit_log
 
 
@@ -121,6 +124,24 @@ def revalidate_verdict(
         old_verdict.verdict == "Missed"
         and new_verdict.verdict == "Detected"
     )
+
+    # Publish dedicated gap-closed event
+    if gap_closed:
+        publish_gap_closed_event(
+            {
+                "event_type": "GAP_CLOSED",
+                "verdict_id": new_verdict.id,
+                "previous_verdict_id": old_verdict.id,
+                "rule_id": rule.id,
+                "rule_name": rule.rule_name,
+                "old_verdict": old_verdict.verdict,
+                "new_verdict": new_verdict.verdict,
+                "verdict_hash": new_verdict.verdict_hash,
+                "supersedes": old_verdict.id,
+                "revalidation": True,
+                "gap_closed": True
+            }
+        )
 
     create_audit_log(
         db=db,
