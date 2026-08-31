@@ -1,31 +1,63 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { getDetectionCoverage } from "../../services/dashboardService";
 import type { CoverageItem } from "../../services/dashboardService";
 
+type StatusFilter = "All" | "Detected" | "Partial" | "Missed";
 
 function getStatusColor(item: CoverageItem) {
-
-  if (item.detected > item.missed) {
-    return "bg-green-100 border-green-500";
+  if (item.detected > item.missed && item.detected >= item.partial) {
+    return "bg-green-50 border-green-500";
   }
 
-  if (item.missed > item.detected) {
-    return "bg-red-100 border-red-500";
+  if (item.missed > item.detected && item.missed >= item.partial) {
+    return "bg-red-50 border-red-500";
   }
 
-  return "bg-yellow-100 border-yellow-500";
+  return "bg-yellow-50 border-yellow-500";
 }
 
+function getStatusLabel(item: CoverageItem) {
+  if (item.detected > item.missed && item.detected >= item.partial) {
+    return "Detected";
+  }
+
+  if (item.missed > item.detected && item.missed >= item.partial) {
+    return "Missed";
+  }
+
+  return "Partial";
+}
+
+function getCoveragePercentage(item: CoverageItem) {
+  const total = item.detected + item.missed + item.partial;
+
+  if (total === 0) {
+    return 0;
+  }
+
+  return Math.round((item.detected / total) * 100);
+}
 
 export default function CoverageHeatmap() {
-
   const [coverage, setCoverage] = useState<CoverageItem[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [statusFilter, setStatusFilter] =
+    useState<StatusFilter>("All");
+
+  const [tacticFilter, setTacticFilter] =
+    useState("All");
+
+  const [searchTerm, setSearchTerm] =
+    useState("");
+
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState("");
+
+  const [selectedTechnique, setSelectedTechnique] =
+    useState<string | null>(null);
 
   useEffect(() => {
-
     getDetectionCoverage()
       .then((data) => {
         setCoverage(data);
@@ -39,110 +71,417 @@ export default function CoverageHeatmap() {
 
         setLoading(false);
       });
-
   }, []);
 
+  const tactics = useMemo(() => {
+    const uniqueTactics = Array.from(
+      new Set(
+        coverage
+          .map((item) => item.tactic)
+          .filter(Boolean)
+      )
+    );
+
+    return uniqueTactics.sort();
+  }, [coverage]);
+
+  const filteredCoverage = useMemo(() => {
+    const search = appliedSearchTerm.trim().toLowerCase();
+
+    return coverage.filter((item) => {
+      const matchesStatus =
+        statusFilter === "All" ||
+        getStatusLabel(item) === statusFilter;
+
+      const matchesTactic =
+        tacticFilter === "All" ||
+        item.tactic === tacticFilter;
+
+      const matchesSearch =
+        search === "" ||
+        item.technique.toLowerCase().includes(search) ||
+        item.name.toLowerCase().includes(search) ||
+        item.rule_name.toLowerCase().includes(search) ||
+        item.status.toLowerCase().includes(search) ||
+        (search === "detected" && item.detected > 0) ||
+        (search === "partial" && item.partial > 0) ||
+        (search === "missed" && item.missed > 0);
+      
+      return (
+        matchesStatus &&
+        matchesTactic &&
+        matchesSearch
+      );
+    });
+  }, [
+    coverage,
+    statusFilter,
+    tacticFilter,
+    searchTerm,
+  ]);
+
+  const selectedItem = coverage.find(
+    (item) => item.technique === selectedTechnique
+  );
 
   if (loading) {
     return (
-      <div className="mt-6">
-        <h2 className="text-xl font-semibold">
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold mb-4">
           Detection Coverage Heatmap
         </h2>
 
-        <p>
-          Loading coverage...
-        </p>
+        <p>Loading coverage...</p>
       </div>
     );
   }
 
-
   return (
-
     <div className="mt-8">
+      <div className="flex flex-col gap-2 mb-5">
+        <h2 className="text-xl font-semibold">
+          Detection Coverage Heatmap
+        </h2>
 
-      <h2 className="text-xl font-semibold mb-4">
-        Detection Coverage Heatmap
-      </h2>
+        <p className="text-sm text-gray-600">
+          Interactive view of detection coverage across
+          ATT&CK techniques and validation verdicts.
+        </p>
+      </div>
 
+      {/* Filters */}
+      <div
+        className="
+          grid
+          grid-cols-1
+          md:grid-cols-3
+          gap-4
+          mb-6
+          p-4
+          border
+          rounded-lg
+          bg-gray-50
+        "
+      >
+        <div>
+          <label
+            htmlFor="coverage-search"
+            className="block text-sm font-medium mb-1"
+          >
+            Search
+          </label>
 
-      {
-        coverage.length === 0 ? (
+          <input
+            id="coverage-search"
+            type="text"
+            value={searchTerm}
+            onChange={(event) =>
+            setSearchTerm(event.target.value)
+          }
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              setAppliedSearchTerm(searchTerm);
+          }
+        }}
+        placeholder="Search technique, rule, or verdict..."
+        className="
+          w-full
+          border
+          rounded-md
+          px-3
+          py-2
+          bg-white
+        "
+      />
+          
+        </div>
 
-          <p>
-            No coverage data available.
-          </p>
+        <div>
+          <label
+            htmlFor="coverage-status"
+            className="block text-sm font-medium mb-1"
+          >
+            Verdict Status
+          </label>
 
-        ) : (
-
-          <div
+          <select
+            id="coverage-status"
+            value={statusFilter}
+            onChange={(event) =>
+              setStatusFilter(
+                event.target.value as StatusFilter
+              )
+            }
             className="
-              grid
-              grid-cols-1
-              md:grid-cols-3
-              gap-4
+              w-full
+              border
+              rounded-md
+              px-3
+              py-2
+              bg-white
             "
           >
+            <option value="All">All</option>
+            <option value="Detected">Detected</option>
+            <option value="Partial">Partial</option>
+            <option value="Missed">Missed</option>
+          </select>
+        </div>
 
-            {
-              coverage.map((item) => (
+        <div>
+          <label
+            htmlFor="coverage-tactic"
+            className="block text-sm font-medium mb-1"
+          >
+            MITRE Tactic
+          </label>
 
-                <div
-                  key={item.technique}
-                  className={`
-                    border
-                    rounded-lg
-                    p-5
-                    ${getStatusColor(item)}
-                  `}
-                >
+          <select
+            id="coverage-tactic"
+            value={tacticFilter}
+            onChange={(event) =>
+              setTacticFilter(event.target.value)
+            }
+            className="
+              w-full
+              border
+              rounded-md
+              px-3
+              py-2
+              bg-white
+            "
+          >
+            <option value="All">All Tactics</option>
 
-                  <h3 className="text-lg font-bold">
-                    {item.technique}
-                  </h3>
+            {tactics.map((tactic) => (
+              <option key={tactic} value={tactic}>
+                {tactic}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
+      {/* Legend */}
+      <div className="flex flex-wrap gap-4 mb-5 text-sm">
+        <div className="flex items-center gap-2">
+          <span className="w-4 h-4 rounded bg-green-200 border border-green-500" />
+          Detected
+        </div>
 
-                  <p className="text-sm mb-4">
-                    {item.rule_name}
-                  </p>
+        <div className="flex items-center gap-2">
+          <span className="w-4 h-4 rounded bg-yellow-200 border border-yellow-500" />
+          Partial
+        </div>
 
+        <div className="flex items-center gap-2">
+          <span className="w-4 h-4 rounded bg-red-200 border border-red-500" />
+          Missed
+        </div>
+      </div>
 
-                  <div className="space-y-1">
+      {/* Heatmap */}
+      {filteredCoverage.length === 0 ? (
+        <div className="border rounded-lg p-6 text-center text-gray-600">
+          No coverage data matches the selected filters.
+        </div>
+      ) : (
+        <div
+          className="
+            grid
+            grid-cols-1
+            sm:grid-cols-2
+            lg:grid-cols-3
+            gap-4
+          "
+        >
+          {filteredCoverage.map((item) => {
+            const coveragePercentage =
+              getCoveragePercentage(item);
 
-                    <p>
-                      🟢 Detected:
-                      {" "}
-                      {item.detected}
+            const status = getStatusLabel(item);
+
+            const isSelected =
+              selectedTechnique === item.technique;
+
+            return (
+              <button
+                key={`${item.technique}-${item.rule_name}`}
+                type="button"
+                onClick={() =>
+                  setSelectedTechnique(item.technique)
+                }
+                className={`
+                  text-left
+                  border
+                  rounded-lg
+                  p-5
+                  transition
+                  hover:shadow-md
+                  cursor-pointer
+                  ${getStatusColor(item)}
+                  ${
+                    isSelected
+                      ? "ring-2 ring-blue-500"
+                      : ""
+                  }
+                `}
+              >
+                <div className="flex justify-between items-start gap-3">
+                  <div>
+                    <h3 className="text-lg font-bold">
+                      {item.technique}
+                    </h3>
+
+                    <p className="text-sm text-gray-700">
+                      {item.name}
                     </p>
-
-
-                    <p>
-                      🔴 Missed:
-                      {" "}
-                      {item.missed}
-                    </p>
-
-
-                    <p>
-                      🟡 Partial:
-                      {" "}
-                      {item.partial}
-                    </p>
-
                   </div>
 
+                  <span className="text-xs font-semibold border rounded-full px-2 py-1 bg-white">
+                    {status}
+                  </span>
                 </div>
 
-              ))
-            }
+                <p className="text-sm mt-3 font-medium">
+                  Rule: {item.rule_name}
+                </p>
 
+                <p className="text-xs text-gray-600 mt-1">
+                  Tactic: {item.tactic}
+                </p>
+
+                <div className="mt-4">
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>Detection Coverage</span>
+                    <span className="font-semibold">
+                      {coveragePercentage}%
+                    </span>
+                  </div>
+
+                  <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-green-500"
+                      style={{
+                        width: `${coveragePercentage}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 mt-4 text-sm">
+                  <div>
+                    <div className="font-semibold">
+                      {item.detected}
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      Detected
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="font-semibold">
+                      {item.partial}
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      Partial
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="font-semibold">
+                      {item.missed}
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      Missed
+                    </div>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Selected Technique Details */}
+      {selectedItem && (
+        <div className="mt-6 border rounded-lg p-5 bg-white shadow-sm">
+          <div className="flex justify-between items-start gap-4">
+            <div>
+              <h3 className="text-lg font-semibold">
+                Selected Technique
+              </h3>
+
+              <p className="text-xl font-bold mt-1">
+                {selectedItem.technique}
+              </p>
+
+              <p className="text-sm text-gray-600">
+                {selectedItem.name}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                setSelectedTechnique(null)
+              }
+              className="
+                px-3
+                py-1
+                border
+                rounded-md
+                text-sm
+                hover:bg-gray-100
+              "
+            >
+              Clear
+            </button>
           </div>
 
-        )
-      }
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-5">
+            <div>
+              <p className="text-xs text-gray-500">
+                Tactic
+              </p>
 
+              <p className="font-medium">
+                {selectedItem.tactic}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs text-gray-500">
+                Rule
+              </p>
+
+              <p className="font-medium">
+                {selectedItem.rule_name}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs text-gray-500">
+                Status
+              </p>
+
+              <p className="font-medium">
+                {getStatusLabel(selectedItem)}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs text-gray-500">
+                Coverage
+              </p>
+
+              <p className="font-medium">
+                {getCoveragePercentage(selectedItem)}%
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-
   );
 }

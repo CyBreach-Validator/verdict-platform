@@ -66,39 +66,31 @@ def get_detection_coverage(db: Session):
             status = "Missed"
 
 
-        result.append(
-            {
-                "technique": technique,
+    result.append(
+        {
+            "technique": technique,
 
-                "name":
-                MITRE_TECHNIQUES
-                .get(
-                    technique,
-                    {}
-                )
-                .get(
-                    "name",
-                    "Unknown Technique"
-                ),
+           "name": (
+               MITRE_TECHNIQUES
+               .get(technique, {})
+               .get("name", "Unknown Technique")
+            ),
 
-                "tactic":
-                MITRE_TECHNIQUES
-                .get(
-                    technique,
-                    {}
-                )
-                .get(
-                    "tactic",
-                    "Unknown"
-                ),
+           "tactic": (
+               MITRE_TECHNIQUES
+               .get(technique, {})
+               .get("tactic", "Unknown")
+            ),
 
-                "rule_name":
-                data["rule_name"],
+            "rule_name": data["rule_name"],
 
-                "status": status
-            }
-        )
+            "status": status,
 
+            "detected": data["detected"],
+            "partial": data["partial"],
+            "missed": data["missed"],
+      }
+    )
 
     return result
 

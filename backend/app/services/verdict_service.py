@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.models.verdict import Verdict
 from app.utils.hash_utils import generate_verdict_hash
 from app.kafka.producer import publish_corrected_verdict
+from app.websocket.connection_manager import manager
 
 
 def save_verdict(
