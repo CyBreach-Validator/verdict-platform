@@ -32,24 +32,25 @@ export default function VerdictDetailsPage() {
     useState<string | null>(null);
 
   useEffect(() => {
-    console.log("VerdictDetails mounted");
-    console.log("Route ID:", id);
-
     if (!id) return;
+
+    setLoading(true);
 
     getVerdict(Number(id))
       .then((data) => {
         setVerdict(data);
-        setLoading(false);
       })
       .catch((err) => {
-        console.error(err);
+        console.error("Failed to load verdict:", err);
+        setVerdict(null);
+      })
+      .finally(() => {
         setLoading(false);
       });
   }, [id]);
 
   const handleRevalidate = async () => {
-    if (!verdict) return;
+    if (!verdict || revalidating) return;
 
     setRevalidating(true);
     setRevalidationError(null);
@@ -58,25 +59,15 @@ export default function VerdictDetailsPage() {
     try {
       const result = await revalidateVerdict(verdict.id);
 
-      console.log(
-        "Re-validation completed:",
-        result
-      );
-
       setRevalidationResult(result);
 
-      // Refresh the original verdict so that
-      // superseded/superseded_by information is updated.
-      const updatedVerdict = await getVerdict(
-        verdict.id
-      );
+      // Refresh original verdict so supersession
+      // information is immediately reflected.
+      const updatedVerdict = await getVerdict(verdict.id);
 
       setVerdict(updatedVerdict);
     } catch (err) {
-      console.error(
-        "Re-validation failed:",
-        err
-      );
+      console.error("Re-validation failed:", err);
 
       setRevalidationError(
         "Re-validation failed. Please try again."
@@ -86,278 +77,345 @@ export default function VerdictDetailsPage() {
     }
   };
 
+  const getVerdictClass = (value: string) => {
+    switch (value.toLowerCase()) {
+      case "detected":
+        return "verdict-badge verdict-detected";
+
+      case "missed":
+        return "verdict-badge verdict-missed";
+
+      case "partial":
+        return "verdict-badge verdict-partial";
+
+      case "no data":
+        return "verdict-badge verdict-no-data";
+
+      default:
+        return "verdict-badge";
+    }
+  };
+
+  const formatEventData = () => {
+    try {
+      return JSON.stringify(
+        JSON.parse(verdict?.event_data || "{}"),
+        null,
+        2
+      );
+    } catch {
+      return verdict?.event_data || "No event data available.";
+    }
+  };
+
   if (loading) {
-    return <h2>Loading...</h2>;
+    return (
+      <div className="verdict-page">
+        <div className="verdict-loading">
+          Loading verdict details...
+        </div>
+      </div>
+    );
   }
 
   if (!verdict) {
-    return <h2>Verdict not found.</h2>;
+    return (
+      <div className="verdict-page">
+        <div className="verdict-error">
+          <h2>Verdict not found</h2>
+
+          <Link to="/dashboard">
+            ← Back to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div style={{ padding: 30 }}>
-      <Link to="/dashboard">
-        ← Back to Dashboard
-      </Link>
+    <div className="verdict-page">
+      {/* Header */}
+      <div className="verdict-header">
+        <div>
+          <Link
+            to="/dashboard"
+            className="back-link"
+          >
+            ← Back to Dashboard
+          </Link>
 
-      <h1 style={{ marginTop: 20 }}>
-        Verdict Details
-      </h1>
+          <h1>Verdict Details</h1>
 
-      <table
-        style={{
-          borderCollapse: "collapse",
-          width: "100%",
-          marginTop: 20,
-        }}
-      >
-        <tbody>
-          <tr>
-            <td><b>ID</b></td>
-            <td>{verdict.id}</td>
-          </tr>
+          <p className="verdict-subtitle">
+            Detailed validation result for verdict #{verdict.id}
+          </p>
+        </div>
 
-          <tr>
-            <td><b>Rule Name</b></td>
-            <td>{verdict.rule_name}</td>
-          </tr>
+        <div className={getVerdictClass(verdict.verdict)}>
+          {verdict.verdict}
+        </div>
+      </div>
 
-          <tr>
-            <td><b>Rule ID</b></td>
-            <td>{verdict.rule_id}</td>
-          </tr>
+      {/* Overview */}
+      <section className="verdict-section">
+        <div className="section-header">
+          <h2>Overview</h2>
+        </div>
 
-          <tr>
-            <td><b>Verdict</b></td>
-            <td>{verdict.verdict}</td>
-          </tr>
+        <div className="details-grid">
+          <div className="detail-card">
+            <span className="detail-label">
+              Verdict ID
+            </span>
+            <strong>{verdict.id}</strong>
+          </div>
 
-          <tr>
-            <td><b>Verdict Hash</b></td>
-            <td
-              style={{
-                wordBreak: "break-all",
-              }}
-            >
-              {verdict.verdict_hash}
-            </td>
-          </tr>
+          <div className="detail-card">
+            <span className="detail-label">
+              Rule ID
+            </span>
+            <strong>{verdict.rule_id}</strong>
+          </div>
 
-          <tr>
-            <td><b>Superseded</b></td>
-            <td>
-              {verdict.is_superseded
-                ? "Yes"
-                : "No"}
-            </td>
-          </tr>
+          <div className="detail-card">
+            <span className="detail-label">
+              Rule Name
+            </span>
+            <strong>{verdict.rule_name}</strong>
+          </div>
 
-          <tr>
-            <td><b>Superseded By</b></td>
-            <td>
-              {verdict.superseded_by ?? "-"}
-            </td>
-          </tr>
+          <div className="detail-card">
+            <span className="detail-label">
+              Verdict
+            </span>
+            <span className={getVerdictClass(verdict.verdict)}>
+              {verdict.verdict}
+            </span>
+          </div>
 
-          <tr>
-            <td><b>Created At</b></td>
-            <td>
+          <div className="detail-card">
+            <span className="detail-label">
+              Created At
+            </span>
+            <strong>
               {new Date(
                 verdict.created_at
               ).toLocaleString()}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+            </strong>
+          </div>
 
-      {/* Re-Validation */}
-      <div style={{ marginTop: 30 }}>
-        <button
-           onClick={handleRevalidate}
-           disabled={revalidating}
-           style={{
-             padding: "10px 18px",
-             borderRadius: 6,
-             border: "1px solid #333",
-             background: revalidating ? "#ddd" : "#333",
-             color: revalidating ? "#666" : "#fff",
-             cursor: revalidating
-               ? "not-allowed"
-               : "pointer",
-             fontWeight: "bold",
-             fontSize: 14,
-           }}
-         >
-           {revalidating
-             ? "Re-validating..."
-             : "Re-Validate"}
-         </button>
-      </div>
+          <div className="detail-card">
+            <span className="detail-label">
+              Superseded
+            </span>
 
-      {revalidationError && (
-        <div
-          style={{
-            marginTop: 15,
-            padding: 12,
-            borderRadius: 6,
-            background: "#ffe6e6",
-            color: "#b00020",
-          }}
-        >
-          {revalidationError}
+            <strong>
+              {verdict.is_superseded ? "Yes" : "No"}
+            </strong>
+          </div>
+
+          <div className="detail-card">
+            <span className="detail-label">
+              Superseded By
+            </span>
+
+            <strong>
+              {verdict.superseded_by ?? "—"}
+            </strong>
+          </div>
+
+          <div className="detail-card detail-card-wide">
+            <span className="detail-label">
+              Verdict Hash
+            </span>
+
+            <code className="hash-value">
+              {verdict.verdict_hash}
+            </code>
+          </div>
         </div>
-      )}
+      </section>
 
-      {/* Re-Validation Comparison */}
-      {revalidationResult && (
-        <div
-          style={{
-            marginTop: 30,
-            padding: 20,
-            border: "1px solid #ddd",
-            borderRadius: 8,
-          }}
-        >
-          <h2>
-            Re-Validation Result
-          </h2>
+      {/* Re-validation */}
+      <section className="verdict-section">
+        <div className="section-header">
+          <div>
+            <h2>Re-Validation</h2>
 
-          <table
-            style={{
-              borderCollapse: "collapse",
-              width: "100%",
-              marginTop: 15,
-            }}
+            <p>
+              Re-run validation against the current rule
+              and compare the result with this verdict.
+            </p>
+          </div>
+
+          <button
+            onClick={handleRevalidate}
+            disabled={revalidating}
+            className="revalidate-button"
           >
-            <tbody>
-              <tr>
-                <td><b>Original Verdict</b></td>
-                <td>
-                  {
-                    revalidationResult
-                      .old_verdict.verdict
-                  }
-                </td>
-              </tr>
-
-              <tr>
-                <td><b>New Verdict</b></td>
-                <td>
-                  {
-                    revalidationResult
-                      .new_verdict.verdict
-                  }
-                </td>
-              </tr>
-
-              <tr>
-                <td><b>Original Score</b></td>
-                <td>
-                  {
-                    revalidationResult
-                      .comparison.old_score
-                  }
-                </td>
-              </tr>
-
-              <tr>
-                <td><b>New Score</b></td>
-                <td>
-                  {
-                    revalidationResult
-                      .comparison.new_score
-                  }
-                </td>
-              </tr>
-
-              <tr>
-                <td><b>Score Delta</b></td>
-                <td>
-                  {
-                    revalidationResult
-                      .comparison.delta > 0
-                      ? `+${revalidationResult.comparison.delta}`
-                      : revalidationResult.comparison.delta
-                  }
-                </td>
-              </tr>
-
-              <tr>
-                <td><b>Improved</b></td>
-                <td>
-                  {
-                    revalidationResult
-                      .comparison.improved
-                      ? "Yes"
-                      : "No"
-                  }
-                </td>
-              </tr>
-
-              <tr>
-                <td><b>Gap Closed</b></td>
-                <td>
-                  {
-                    revalidationResult
-                      .comparison.gap_closed
-                      ? "Yes"
-                      : "No"
-                  }
-                </td>
-              </tr>
-
-              <tr>
-                <td><b>New Verdict ID</b></td>
-                <td>
-                  {
-                    revalidationResult
-                      .new_verdict.id
-                  }
-                </td>
-              </tr>
-
-              <tr>
-                <td><b>New Verdict Hash</b></td>
-                <td
-                  style={{
-                    wordBreak: "break-all",
-                  }}
-                >
-                  {
-                    revalidationResult
-                      .new_verdict.verdict_hash
-                  }
-                </td>
-              </tr>
-            </tbody>
-          </table>
+            {revalidating
+              ? "Re-validating..."
+              : "Re-Validate"}
+          </button>
         </div>
-      )}
 
-      <h2 style={{ marginTop: 30 }}>
-        Event Data
-      </h2>
-
-      <pre
-        style={{
-          background: "#f5f5f5",
-          padding: 20,
-          borderRadius: 8,
-        }}
-      >
-        {JSON.stringify(
-          JSON.parse(verdict.event_data),
-          null,
-          2
+        {revalidationError && (
+          <div className="revalidation-error">
+            {revalidationError}
+          </div>
         )}
-      </pre>
 
-      <VerdictTimeline
-        verdict={verdict}
-        revalidationResult={revalidationResult}
-      />
+        {revalidationResult && (
+          <div className="comparison-container">
+            <h3>Before / After Comparison</h3>
 
-      <CausalChain verdictId={verdict.id} />
+            <div className="comparison-grid">
+              <div className="comparison-card">
+                <span>Original Verdict</span>
+
+                <strong
+                  className={getVerdictClass(
+                    revalidationResult.old_verdict.verdict
+                  )}
+                >
+                  {revalidationResult.old_verdict.verdict}
+                </strong>
+
+                <small>
+                  Score:{" "}
+                  {revalidationResult.comparison.old_score}
+                </small>
+              </div>
+
+              <div className="comparison-arrow">
+                →
+              </div>
+
+              <div className="comparison-card">
+                <span>New Verdict</span>
+
+                <strong
+                  className={getVerdictClass(
+                    revalidationResult.new_verdict.verdict
+                  )}
+                >
+                  {revalidationResult.new_verdict.verdict}
+                </strong>
+
+                <small>
+                  Score:{" "}
+                  {revalidationResult.comparison.new_score}
+                </small>
+              </div>
+            </div>
+
+            <div className="comparison-summary">
+              <div>
+                  <span>Score Delta</span>
+                  <strong>
+                    {revalidationResult.comparison.delta > 0 ? "+" : ""}
+                    {revalidationResult.comparison.delta}
+                 </strong>
+                </div>
+
+              <div>
+                <span>Improved</span>
+                <strong>
+                  {revalidationResult.comparison.improved
+                    ? "Yes"
+                    : "No"}
+                </strong>
+              </div>
+
+              <div>
+                <span>Gap Closed</span>
+                <strong>
+                  {revalidationResult.comparison.gap_closed
+                    ? "Yes"
+                    : "No"}
+                </strong>
+              </div>
+
+              <div>
+                <span>New Verdict ID</span>
+                <strong>
+                  {revalidationResult.new_verdict.id}
+                </strong>
+              </div>
+            </div>
+
+            <div className="revalidation-metadata">
+              <div>
+                <span>Validation Status</span>
+                <strong>
+                  {revalidationResult.validation.status}
+                </strong>
+              </div>
+
+              <div>
+                <span>New Verdict Hash</span>
+                <code>
+                  {revalidationResult.new_verdict.verdict_hash}
+                </code>
+                
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Event Data */}
+      <section className="verdict-section">
+        <div className="section-header">
+          <div>
+            <h2>Event Data</h2>
+
+            <p>
+              Raw evidence event associated with this verdict.
+            </p>
+          </div>
+        </div>
+
+        <pre className="event-data">
+          {formatEventData()}
+        </pre>
+      </section>
+
+      {/* Timeline */}
+      <section className="verdict-section">
+        <div className="section-header">
+          <div>
+            <h2>Verdict Timeline</h2>
+
+            <p>
+              Chronological history of this verdict and
+              related re-validation activity.
+            </p>
+          </div>
+        </div>
+
+        <VerdictTimeline
+          verdict={verdict}
+          revalidationResult={revalidationResult}
+        />
+      </section>
+
+      {/* Causal Chain */}
+      <section className="verdict-section">
+        <div className="section-header">
+          <div>
+            <h2>Causal Chain</h2>
+
+            <p>
+              Validation path connecting the evidence,
+              rule evaluation, and resulting verdict.
+            </p>
+          </div>
+        </div>
+
+        <CausalChain verdictId={verdict.id} />
+      </section>
+
     </div>
   );
 }
