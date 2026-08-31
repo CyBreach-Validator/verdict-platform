@@ -1,144 +1,663 @@
 import { useEffect, useState } from "react";
-import api from "../services/api";
 import RuleComparison from "../components/rules/RuleComparison";
+import {
+  searchRules,
+  createRule,
+  updateRule,
+  deleteRule,
+  approveRule,
+} from "../services/ruleService";
 
-interface Rule {
-  id: number;
-  rule_name: string;
-  rule_type: string;
-  severity: string;
-  status: string;
-}
+import type {
+  Rule,
+  RuleInput,
+} from "../services/ruleService";
+
+const emptyRule: RuleInput = {
+  rule_name: "",
+  rule_type: "Sigma",
+  severity: "Medium",
+  description: "",
+  query: "",
+  status: "Pending",
+  mitre_technique: "",
+};
 
 export default function RuleManagement() {
   const [rules, setRules] = useState<Rule[]>([]);
   const [search, setSearch] = useState("");
-  const [selectedRuleId, setSelectedRuleId] = useState<number | null>(null);
 
-  const token = localStorage.getItem("access_token");
+  const [selectedRuleId, setSelectedRuleId] =
+    useState<number | null>(null);
 
-  console.log("Token from localStorage:", token);
+  const [editingRule, setEditingRule] =
+    useState<Rule | null>(null);
 
-  const fetchRules = async () => {
+  const [showForm, setShowForm] = useState(false);
+
+  const [formData, setFormData] =
+    useState<RuleInput>(emptyRule);
+
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const fetchRules = async (query = search) => {
     try {
-      console.log("Fetching rules...");
+      setLoading(true);
+      setError("");
 
-      const response = await api.get(
-        `/rules/search?q=${encodeURIComponent(search)}`
+      const data = await searchRules(query);
+      setRules(data);
+    } catch (err: any) {
+      console.error("Failed to fetch rules:", err);
+
+      setError(
+        err.response?.data?.detail ||
+          "Failed to load rules."
       );
-
-      console.log("Rules response:", response.data);
-
-      setRules(response.data);
-    } catch (err: any) {
-      console.error("Failed to fetch rules");
-      console.error("Status:", err.response?.status);
-      console.error("Response:", err.response?.data);
-    }
-  };
-
-  const approveRule = async (id: number) => {
-    try {
-      console.log("Approving rule:", id);
-
-      await api.put(`/rules/${id}/approve`, {});
-
-      console.log("Rule approved successfully");
-
-      fetchRules();
-    } catch (err: any) {
-      console.error("Failed to approve rule");
-      console.error("Status:", err.response?.status);
-      console.error("Response:", err.response?.data);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchRules();
+    fetchRules("");
   }, []);
+
+  const handleSearch = async () => {
+    await fetchRules(search);
+  };
+
+  const openCreateForm = () => {
+    setEditingRule(null);
+    setFormData(emptyRule);
+    setShowForm(true);
+    setError("");
+  };
+
+  const openEditForm = (rule: Rule) => {
+    setEditingRule(rule);
+
+    setFormData({
+      rule_name: rule.rule_name,
+      rule_type: rule.rule_type,
+      severity: rule.severity,
+      description: rule.description || "",
+      query: rule.query,
+      status: rule.status,
+      mitre_technique:
+        rule.mitre_technique || "",
+    });
+
+    setShowForm(true);
+    setError("");
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingRule(null);
+    setFormData(emptyRule);
+  };
+
+  const handleInputChange = (
+    field: keyof RuleInput,
+    value: string
+  ) => {
+    setFormData((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+  };
+
+  const handleSubmit = async (
+    event: React.FormEvent
+  ) => {
+    event.preventDefault();
+
+    try {
+      setSaving(true);
+      setError("");
+
+      if (editingRule) {
+        await updateRule(
+          editingRule.id,
+          formData
+        );
+      } else {
+        await createRule(formData);
+      }
+
+      closeForm();
+      await fetchRules(search);
+    } catch (err: any) {
+      console.error("Failed to save rule:", err);
+
+      setError(
+        err.response?.data?.detail ||
+          "Failed to save rule."
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (rule: Rule) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${rule.rule_name}"?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setError("");
+
+      await deleteRule(rule.id);
+
+      if (selectedRuleId === rule.id) {
+        setSelectedRuleId(null);
+      }
+
+      await fetchRules(search);
+    } catch (err: any) {
+      console.error("Failed to delete rule:", err);
+
+      setError(
+        err.response?.data?.detail ||
+          "Failed to delete rule."
+      );
+    }
+  };
+
+  const handleApprove = async (rule: Rule) => {
+    try {
+      setError("");
+
+      await approveRule(rule.id);
+
+      await fetchRules(search);
+    } catch (err: any) {
+      console.error(
+        "Failed to approve rule:",
+        err
+      );
+
+      setError(
+        err.response?.data?.detail ||
+          "Failed to approve rule."
+      );
+    }
+  };
+
+  const getSeverityClass = (
+    severity: string
+  ) => {
+    switch (severity.toLowerCase()) {
+      case "critical":
+        return "bg-red-100 text-red-700";
+      case "high":
+        return "bg-orange-100 text-orange-700";
+      case "medium":
+        return "bg-yellow-100 text-yellow-700";
+      case "low":
+        return "bg-green-100 text-green-700";
+      default:
+        return "bg-gray-100 text-gray-700";
+    }
+  };
+
+  const getStatusClass = (
+    status: string
+  ) => {
+    switch (status.toLowerCase()) {
+      case "approved":
+        return "bg-green-100 text-green-700";
+      case "pending":
+        return "bg-yellow-100 text-yellow-700";
+      case "draft":
+        return "bg-gray-100 text-gray-700";
+      case "rejected":
+        return "bg-red-100 text-red-700";
+      default:
+        return "bg-blue-100 text-blue-700";
+    }
+  };
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-bold mb-5">
-        Rule Management
-      </h2>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div>
+          <h2 className="text-2xl font-bold">
+            Rule Management
+          </h2>
 
-      <input
-        type="text"
-        placeholder="Search rules..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="border rounded p-2 mb-5 w-full"
-      />
+          <p className="text-gray-500 mt-1">
+            Manage, review, and approve detection rules.
+          </p>
+        </div>
 
-      <button
-        onClick={fetchRules}
-        className="bg-blue-600 text-white px-4 py-2 rounded mb-5"
-      >
-        Search
-      </button>
+        <button
+          onClick={openCreateForm}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+        >
+          + Create Rule
+        </button>
+      </div>
 
-      <table className="w-full border">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="border p-2">Rule</th>
-            <th className="border p-2">Type</th>
-            <th className="border p-2">Severity</th>
-            <th className="border p-2">Status</th>
-            <th className="border p-2">Action</th>
-          </tr>
-        </thead>
+      {error && (
+        <div className="bg-red-100 text-red-700 border border-red-300 rounded p-3 mb-5">
+          {error}
+        </div>
+      )}
 
-        <tbody>
-          {rules.map((rule) => (
-            <tr key={rule.id}>
-              <td className="border p-2">
-                {rule.rule_name}
-              </td>
+      <div className="bg-white border rounded-lg p-4 mb-6">
+        <div className="flex flex-col md:flex-row gap-3">
+          <input
+            type="text"
+            placeholder="Search rules..."
+            value={search}
+            onChange={(event) =>
+              setSearch(event.target.value)
+            }
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                handleSearch();
+              }
+            }}
+            className="border rounded p-2 flex-1"
+          />
 
-              <td className="border p-2">
-                {rule.rule_type}
-              </td>
+          <button
+            onClick={handleSearch}
+            className="bg-gray-800 hover:bg-gray-900 text-white px-5 py-2 rounded"
+          >
+            Search
+          </button>
 
-              <td className="border p-2">
-                {rule.severity}
-              </td>
+          <button
+            onClick={() => {
+              setSearch("");
+              fetchRules("");
+            }}
+            className="border px-5 py-2 rounded hover:bg-gray-50"
+          >
+            Clear
+          </button>
+        </div>
+      </div>
 
-              <td className="border p-2">
-                {rule.status}
-              </td>
+      <div className="bg-white border rounded-lg overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="text-left p-3 border-b">
+                  Rule
+                </th>
 
-              <td className="border p-2">
-                <div className="flex gap-2">
-                  <button
-                    className="bg-blue-600 text-white px-3 py-1 rounded"
-                    onClick={() => {
-                      console.log("Compare clicked:", rule.id);
-                      setSelectedRuleId(rule.id);
-                    }}
+                <th className="text-left p-3 border-b">
+                  Type
+                </th>
+
+                <th className="text-left p-3 border-b">
+                  Severity
+                </th>
+
+                <th className="text-left p-3 border-b">
+                  Status
+                </th>
+
+                <th className="text-left p-3 border-b">
+                  MITRE
+                </th>
+
+                <th className="text-left p-3 border-b">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="text-center p-6 text-gray-500"
                   >
-                    Compare
-                  </button>
+                    Loading rules...
+                  </td>
+                </tr>
+              ) : rules.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="text-center p-6 text-gray-500"
+                  >
+                    No rules found.
+                  </td>
+                </tr>
+              ) : (
+                rules.map((rule) => (
+                  <tr
+                    key={rule.id}
+                    className="hover:bg-gray-50"
+                  >
+                    <td className="p-3 border-b font-medium">
+                      {rule.rule_name}
+                    </td>
 
-                  {rule.status === "Pending" ? (
-                    <button
-                      className="bg-green-600 text-white px-3 py-1 rounded"
-                      onClick={() => approveRule(rule.id)}
-                    >
-                      Approve
-                    </button>
-                  ) : (
-                    <span>-</span>
-                  )}
+                    <td className="p-3 border-b">
+                      {rule.rule_type}
+                    </td>
+
+                    <td className="p-3 border-b">
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-medium ${getSeverityClass(
+                          rule.severity
+                        )}`}
+                      >
+                        {rule.severity}
+                      </span>
+                    </td>
+
+                    <td className="p-3 border-b">
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-medium ${getStatusClass(
+                          rule.status
+                        )}`}
+                      >
+                        {rule.status}
+                      </span>
+                    </td>
+
+                    <td className="p-3 border-b">
+                      {rule.mitre_technique || "-"}
+                    </td>
+
+                    <td className="p-3 border-b">
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() =>
+                            setSelectedRuleId(rule.id)
+                          }
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
+                        >
+                          Compare
+                        </button>
+
+                        <button
+                          onClick={() =>
+                            openEditForm(rule)
+                          }
+                          className="bg-gray-700 hover:bg-gray-800 text-white px-3 py-1 rounded text-sm"
+                        >
+                          Edit
+                        </button>
+
+                        {rule.status === "Pending" && (
+                          <button
+                            onClick={() =>
+                              handleApprove(rule)
+                            }
+                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm"
+                          >
+                            Approve
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() =>
+                            handleDelete(rule)
+                          }
+                          className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {selectedRuleId !== null && (
+        <div className="mt-6">
+          <div className="flex justify-end mb-2">
+            <button
+              onClick={() => setSelectedRuleId(null)}
+              className="text-gray-600 hover:text-gray-900"
+            >
+              Close comparison
+            </button>
+          </div>
+
+          <RuleComparison
+            ruleId={selectedRuleId}
+          />
+        </div>
+      )}
+
+      {showForm && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-5 border-b">
+              <h3 className="text-xl font-bold">
+                {editingRule
+                  ? "Edit Rule"
+                  : "Create Rule"}
+              </h3>
+
+              <button
+                onClick={closeForm}
+                className="text-gray-500 hover:text-gray-900 text-xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <form
+              onSubmit={handleSubmit}
+              className="p-5 space-y-4"
+            >
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Rule Name
+                </label>
+
+                <input
+                  required
+                  value={formData.rule_name}
+                  onChange={(event) =>
+                    handleInputChange(
+                      "rule_name",
+                      event.target.value
+                    )
+                  }
+                  className="border rounded p-2 w-full"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Rule Type
+                  </label>
+
+                  <select
+                    value={formData.rule_type}
+                    onChange={(event) =>
+                      handleInputChange(
+                        "rule_type",
+                        event.target.value
+                      )
+                    }
+                    className="border rounded p-2 w-full"
+                  >
+                    <option value="Sigma">
+                      Sigma
+                    </option>
+                    <option value="KQL">
+                      KQL
+                    </option>
+                    <option value="SPL">
+                      SPL
+                    </option>
+                    <option value="EQL">
+                      EQL
+                    </option>
+                  </select>
                 </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
 
-      {selectedRuleId && (
-        <RuleComparison ruleId={selectedRuleId} />
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Severity
+                  </label>
+
+                  <select
+                    value={formData.severity}
+                    onChange={(event) =>
+                      handleInputChange(
+                        "severity",
+                        event.target.value
+                      )
+                    }
+                    className="border rounded p-2 w-full"
+                  >
+                    <option value="Low">
+                      Low
+                    </option>
+                    <option value="Medium">
+                      Medium
+                    </option>
+                    <option value="High">
+                      High
+                    </option>
+                    <option value="Critical">
+                      Critical
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  MITRE Technique
+                </label>
+
+                <input
+                  value={
+                    formData.mitre_technique || ""
+                  }
+                  onChange={(event) =>
+                    handleInputChange(
+                      "mitre_technique",
+                      event.target.value
+                    )
+                  }
+                  placeholder="Example: T1059.001"
+                  className="border rounded p-2 w-full"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Status
+                </label>
+
+                <select
+                  value={formData.status}
+                  onChange={(event) =>
+                    handleInputChange(
+                      "status",
+                      event.target.value
+                    )
+                  }
+                  className="border rounded p-2 w-full"
+                >
+                  <option value="Draft">
+                    Draft
+                  </option>
+                  <option value="Pending">
+                    Pending
+                  </option>
+                  <option value="Approved">
+                    Approved
+                  </option>
+                  <option value="Rejected">
+                    Rejected
+                  </option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Description
+                </label>
+
+                <textarea
+                  value={
+                    formData.description || ""
+                  }
+                  onChange={(event) =>
+                    handleInputChange(
+                      "description",
+                      event.target.value
+                    )
+                  }
+                  rows={3}
+                  className="border rounded p-2 w-full"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Query
+                </label>
+
+                <textarea
+                  required
+                  value={formData.query}
+                  onChange={(event) =>
+                    handleInputChange(
+                      "query",
+                      event.target.value
+                    )
+                  }
+                  rows={6}
+                  placeholder="Enter detection query..."
+                  className="border rounded p-2 w-full font-mono text-sm"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t">
+                <button
+                  type="button"
+                  onClick={closeForm}
+                  className="border px-4 py-2 rounded hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-5 py-2 rounded"
+                >
+                  {saving
+                    ? "Saving..."
+                    : editingRule
+                    ? "Update Rule"
+                    : "Create Rule"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

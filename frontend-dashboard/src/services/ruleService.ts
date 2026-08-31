@@ -1,16 +1,25 @@
-import axios from "axios";
+import api from "./api";
 
-const API_URL = "http://127.0.0.1:8033";
+export interface Rule {
+  id: number;
+  rule_name: string;
+  rule_type: string;
+  severity: string;
+  description?: string | null;
+  query: string;
+  status: string;
+  mitre_technique?: string | null;
+}
 
-const getAuthHeaders = () => {
-  const token = localStorage.getItem("access_token");
-
-  return {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  };
-};
+export interface RuleInput {
+  rule_name: string;
+  rule_type: string;
+  severity: string;
+  description?: string;
+  query: string;
+  status: string;
+  mitre_technique?: string;
+}
 
 export interface RuleComparison {
   current: {
@@ -27,12 +36,65 @@ export interface RuleComparison {
   };
 }
 
+export const getRules = async (): Promise<Rule[]> => {
+  const response = await api.get("/rules");
+  return response.data;
+};
+
+export const searchRules = async (
+  query: string
+): Promise<Rule[]> => {
+  const response = await api.get(
+    `/rules/search?q=${encodeURIComponent(query)}`
+  );
+
+  return response.data;
+};
+
+export const getRule = async (
+  ruleId: number
+): Promise<Rule> => {
+  const response = await api.get(`/rules/${ruleId}`);
+  return response.data;
+};
+
+export const createRule = async (
+  rule: RuleInput
+): Promise<Rule> => {
+  const response = await api.post("/rules", rule);
+  return response.data;
+};
+
+export const updateRule = async (
+  ruleId: number,
+  rule: RuleInput
+): Promise<Rule> => {
+  const response = await api.put(`/rules/${ruleId}`, rule);
+  return response.data;
+};
+
+export const deleteRule = async (
+  ruleId: number
+): Promise<void> => {
+  await api.delete(`/rules/${ruleId}`);
+};
+
+export const approveRule = async (
+  ruleId: number
+): Promise<Rule> => {
+  const response = await api.put(
+    `/rules/${ruleId}/approve`,
+    {}
+  );
+
+  return response.data;
+};
+
 export const getRuleComparison = async (
   ruleId: number
 ): Promise<RuleComparison> => {
-  const response = await axios.get(
-    `${API_URL}/rules/${ruleId}/compare`,
-    getAuthHeaders()
+  const response = await api.get(
+    `/rules/${ruleId}/compare`
   );
 
   return response.data;
