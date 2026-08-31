@@ -215,3 +215,83 @@ def validate_uploaded_rule(
         "rule_name": rule.rule_name,
         "verdict": validation_result
     }
+
+def submit_rule_for_approval(
+    db: Session,
+    rule_id: int
+):
+    rule = (
+        db.query(Rule)
+        .filter(Rule.id == rule_id)
+        .first()
+    )
+
+    if not rule:
+        return None, "Rule not found"
+
+    if rule.status not in ["Draft", "Rejected"]:
+        return None, (
+            f"Rule cannot be submitted from "
+            f"'{rule.status}' status."
+        )
+
+    rule.status = "Pending"
+
+    db.commit()
+    db.refresh(rule)
+
+    return rule, None
+
+
+def approve_rule(
+    db: Session,
+    rule_id: int
+):
+    rule = (
+        db.query(Rule)
+        .filter(Rule.id == rule_id)
+        .first()
+    )
+
+    if not rule:
+        return None, "Rule not found"
+
+    if rule.status != "Pending":
+        return None, (
+            f"Only Pending rules can be approved. "
+            f"Current status: '{rule.status}'."
+        )
+
+    rule.status = "Approved"
+
+    db.commit()
+    db.refresh(rule)
+
+    return rule, None
+
+
+def reject_rule(
+    db: Session,
+    rule_id: int
+):
+    rule = (
+        db.query(Rule)
+        .filter(Rule.id == rule_id)
+        .first()
+    )
+
+    if not rule:
+        return None, "Rule not found"
+
+    if rule.status != "Pending":
+        return None, (
+            f"Only Pending rules can be rejected. "
+            f"Current status: '{rule.status}'."
+        )
+
+    rule.status = "Rejected"
+
+    db.commit()
+    db.refresh(rule)
+
+    return rule, None

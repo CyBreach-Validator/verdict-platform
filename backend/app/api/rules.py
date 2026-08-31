@@ -17,7 +17,10 @@ from app.services.rule_service import (
     create_rule as create_rule_service,
     update_rule as update_rule_service,
     delete_rule as delete_rule_service,
-    validate_uploaded_rule
+    validate_uploaded_rule,
+    submit_rule_for_approval,
+    approve_rule as approve_rule_service,
+    reject_rule as reject_rule_service,
 )
 
 router = APIRouter()
@@ -102,27 +105,70 @@ def update_rule(
 
     return rule
 
+@router.put("/rules/{rule_id}/submit")
+def submit_rule(
+    rule_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    rule, error = submit_rule_for_approval(
+        db,
+        rule_id
+    )
+
+    if error:
+        status_code = 404 if error == "Rule not found" else 400
+
+        raise HTTPException(
+            status_code=status_code,
+            detail=error
+        )
+
+    return rule
+
+
 @router.put("/rules/{rule_id}/approve")
 def approve_rule(
     rule_id: int,
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user),
+    current_user=Depends(get_current_user),
 ):
-    rule = db.query(Rule).filter(Rule.id == rule_id).first()
+    rule, error = approve_rule_service(
+        db,
+        rule_id
+    )
 
-    if not rule:
+    if error:
+        status_code = 404 if error == "Rule not found" else 400
+
         raise HTTPException(
-            status_code=404,
-            detail="Rule not found"
+            status_code=status_code,
+            detail=error
         )
-
-    rule.status = "Approved"
-
-    db.commit()
-    db.refresh(rule)
 
     return rule
 
+
+@router.put("/rules/{rule_id}/reject")
+def reject_rule(
+    rule_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    rule, error = reject_rule_service(
+        db,
+        rule_id
+    )
+
+    if error:
+        status_code = 404 if error == "Rule not found" else 400
+
+        raise HTTPException(
+            status_code=status_code,
+            detail=error
+        )
+
+    return rule
 
 @router.delete("/rules/{rule_id}")
 def delete_rule(
@@ -199,24 +245,7 @@ def validate_rule_endpoint(
         )
 
     return result
-
-@router.put("/rules/{rule_id}/approve")
-def approve_rule(
-    rule_id: int,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-):
-    rule = db.query(Rule).filter(Rule.id == rule_id).first()
-
-    if not rule:
-        raise HTTPException(status_code=404, detail="Rule not found")
-
-    rule.status = "Approved"
-
-    db.commit()
-    db.refresh(rule)
-
-    return rule    
+    
 
 @router.get("/rules/{rule_id}/compare")
 def compare_rule(rule_id: int, db: Session = Depends(get_db)):
