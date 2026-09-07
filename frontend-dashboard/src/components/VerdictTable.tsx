@@ -13,59 +13,68 @@ interface VerdictTableProps {
 }
 
 function VerdictTable({ verdicts }: VerdictTableProps) {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
   return (
-    <table
-      style={{
-        width: "100%",
-        borderCollapse: "collapse",
-        marginTop: "20px",
-      }}
-    >
-      <thead>
-        <tr>
-          <th style={{ border: "1px solid #ddd", padding: "12px" }}>ID</th>
-          <th style={{ border: "1px solid #ddd", padding: "12px" }}>
-            Rule Name
-          </th>
-          <th style={{ border: "1px solid #ddd", padding: "12px" }}>
-            Verdict
-          </th>
-          <th style={{ border: "1px solid #ddd", padding: "12px" }}>
-            Created At
-          </th>
-        </tr>
-      </thead>
+    <div className="responsive-table-container w-full min-w-0 overflow-x-auto">
+      <table className="verdict-table w-full min-w-[760px] border-collapse">
+        <thead>
+          <tr>
+            <th className="w-[80px] px-4 py-3 text-left">
+              ID
+            </th>
 
-      <tbody>
-        {verdicts.map((verdict) => (
-          <tr
-            key={verdict.id}
-            onClick={() => navigate(`/verdicts/${verdict.id}`)}
-            style={{
-              cursor: "pointer",
-            }}
-          >
-            <td style={{ border: "1px solid #ddd", padding: "10px" }}>
-              {verdict.id}
-            </td>
+            <th className="min-w-[280px] px-4 py-3 text-left">
+              Rule Name
+            </th>
 
-            <td style={{ border: "1px solid #ddd", padding: "10px" }}>
-              {verdict.rule_name}
-            </td>
+            <th className="w-[150px] px-4 py-3 text-left">
+              Verdict
+            </th>
 
-            <td style={{ border: "1px solid #ddd", padding: "10px" }}>
-              <StatusBadge verdict={verdict.verdict}/>
-            </td>
-
-            <td style={{ border: "1px solid #ddd", padding: "10px" }}>
-              {new Date(verdict.created_at).toLocaleString()}
-            </td>
+            <th className="w-[220px] px-4 py-3 text-left">
+              Created At
+            </th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+
+        <tbody>
+          {verdicts.map((verdict) => (
+            <tr
+              key={verdict.id}
+              onClick={() =>
+                navigate(`/verdicts/${verdict.id}`)
+              }
+              className="cursor-pointer transition hover:bg-gray-50"
+            >
+              <td className="px-4 py-3 align-middle font-medium">
+                {verdict.id}
+              </td>
+
+              <td className="min-w-0 px-4 py-3 align-middle">
+                <div className="break-words">
+                  {verdict.rule_name}
+                </div>
+              </td>
+
+              <td className="px-4 py-3 align-middle">
+                <div className="flex items-center">
+                  <StatusBadge
+                    verdict={verdict.verdict}
+                  />
+                </div>
+              </td>
+
+              <td className="px-4 py-3 align-middle whitespace-nowrap">
+                {new Date(
+                  verdict.created_at
+                ).toLocaleString()}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

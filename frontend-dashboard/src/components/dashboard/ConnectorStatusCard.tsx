@@ -61,16 +61,16 @@ export default function ConnectorStatusCard() {
   const getStatusIndicator = (status: string) => {
     switch (status.toLowerCase()) {
       case "healthy":
-        return "●";
+        return "🟢";
 
       case "disconnected":
-        return "●";
+        return "🔴";
 
       case "connecting":
-        return "●";
+        return "🟡";
 
       default:
-        return "●";
+        return "⚪";
     }
   };
 
@@ -95,9 +95,11 @@ export default function ConnectorStatusCard() {
         style={{
           border: "1px solid #ddd",
           borderRadius: "10px",
-          padding: "24px",
+          padding: "clamp(16px, 4vw, 24px)",
           marginBottom: "30px",
           backgroundColor: "#fff",
+          boxSizing: "border-box",
+          width: "100%",
         }}
       >
         <h2 style={{ marginTop: 0 }}>
@@ -117,9 +119,11 @@ export default function ConnectorStatusCard() {
         style={{
           border: "1px solid #fca5a5",
           borderRadius: "10px",
-          padding: "24px",
+          padding: "clamp(16px, 4vw, 24px)",
           marginBottom: "30px",
           backgroundColor: "#fff5f5",
+          boxSizing: "border-box",
+          width: "100%",
         }}
       >
         <h2 style={{ marginTop: 0 }}>
@@ -130,6 +134,7 @@ export default function ConnectorStatusCard() {
           style={{
             color: "#b91c1c",
             marginBottom: 0,
+            overflowWrap: "anywhere",
           }}
         >
           {error}
@@ -143,11 +148,12 @@ export default function ConnectorStatusCard() {
       style={{
         border: "1px solid #ddd",
         borderRadius: "10px",
-        padding: "24px",
+        padding: "clamp(16px, 4vw, 24px)",
         marginBottom: "30px",
         backgroundColor: "#fff",
         boxSizing: "border-box",
         width: "100%",
+        minWidth: 0,
       }}
     >
       {/* Header */}
@@ -156,13 +162,23 @@ export default function ConnectorStatusCard() {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
-          gap: "20px",
+          gap: "16px",
           marginBottom: "24px",
           flexWrap: "wrap",
         }}
       >
-        <div>
-          <h2 style={{ margin: "0 0 6px" }}>
+        <div
+          style={{
+            minWidth: 0,
+            flex: "1 1 280px",
+          }}
+        >
+          <h2
+            style={{
+              margin: "0 0 6px",
+              overflowWrap: "anywhere",
+            }}
+          >
             SIEM Connector Health
           </h2>
 
@@ -171,6 +187,7 @@ export default function ConnectorStatusCard() {
               margin: 0,
               color: "#666",
               fontSize: "14px",
+              overflowWrap: "anywhere",
             }}
           >
             Monitor the connection status of registered SIEM
@@ -186,6 +203,8 @@ export default function ConnectorStatusCard() {
             color: "#374151",
             fontSize: "13px",
             fontWeight: "bold",
+            flexShrink: 0,
+            whiteSpace: "nowrap",
           }}
         >
           {connectors.length} Connector
@@ -198,17 +217,20 @@ export default function ConnectorStatusCard() {
         style={{
           display: "grid",
           gridTemplateColumns:
-            "repeat(auto-fit, minmax(150px, 1fr))",
+            "repeat(auto-fit, minmax(min(150px, 100%), 1fr))",
           gap: "12px",
           marginBottom: "24px",
         }}
       >
+        {/* Healthy */}
         <div
           style={{
             border: "1px solid #86efac",
             borderRadius: "8px",
             padding: "16px",
             backgroundColor: "#f0fdf4",
+            minWidth: 0,
+            boxSizing: "border-box",
           }}
         >
           <div
@@ -234,12 +256,15 @@ export default function ConnectorStatusCard() {
           </div>
         </div>
 
+        {/* Connecting */}
         <div
           style={{
             border: "1px solid #fcd34d",
             borderRadius: "8px",
             padding: "16px",
             backgroundColor: "#fffbeb",
+            minWidth: 0,
+            boxSizing: "border-box",
           }}
         >
           <div
@@ -265,12 +290,15 @@ export default function ConnectorStatusCard() {
           </div>
         </div>
 
+        {/* Disconnected */}
         <div
           style={{
             border: "1px solid #fca5a5",
             borderRadius: "8px",
             padding: "16px",
             backgroundColor: "#fef2f2",
+            minWidth: 0,
+            boxSizing: "border-box",
           }}
         >
           <div
@@ -301,11 +329,12 @@ export default function ConnectorStatusCard() {
       {connectors.length === 0 ? (
         <div
           style={{
-            padding: "30px",
+            padding: "30px 20px",
             textAlign: "center",
             border: "1px dashed #ccc",
             borderRadius: "8px",
             color: "#666",
+            overflowWrap: "anywhere",
           }}
         >
           No SIEM connectors registered.
@@ -315,6 +344,7 @@ export default function ConnectorStatusCard() {
           style={{
             display: "grid",
             gap: "12px",
+            minWidth: 0,
           }}
         >
           {connectors.map((connector) => {
@@ -328,12 +358,14 @@ export default function ConnectorStatusCard() {
                 style={{
                   border: "1px solid #e5e7eb",
                   borderRadius: "8px",
-                  padding: "18px",
+                  padding: "clamp(14px, 3vw, 18px)",
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
-                  gap: "20px",
+                  gap: "16px",
                   flexWrap: "wrap",
+                  minWidth: 0,
+                  boxSizing: "border-box",
                 }}
               >
                 {/* Connector Information */}
@@ -346,14 +378,18 @@ export default function ConnectorStatusCard() {
                   <div
                     style={{
                       display: "flex",
-                      alignItems: "center",
+                      alignItems: "flex-start",
                       gap: "10px",
+                      flexWrap: "wrap",
+                      minWidth: 0,
                     }}
                   >
                     <h3
                       style={{
                         margin: 0,
                         fontSize: "17px",
+                        minWidth: 0,
+                        overflowWrap: "anywhere",
                       }}
                     >
                       {connector.name}
@@ -366,28 +402,39 @@ export default function ConnectorStatusCard() {
                         backgroundColor: "#f3f4f6",
                         padding: "3px 8px",
                         borderRadius: "999px",
+                        flexShrink: 0,
+                        whiteSpace: "nowrap",
                       }}
                     >
                       ID {connector.id}
                     </span>
                   </div>
 
+                  {/* Connector Metadata */}
                   <div
                     style={{
                       display: "flex",
-                      gap: "20px",
+                      gap: "12px 20px",
                       flexWrap: "wrap",
                       marginTop: "8px",
                       fontSize: "13px",
                       color: "#666",
                     }}
                   >
-                    <span>
+                    <span
+                      style={{
+                        overflowWrap: "anywhere",
+                      }}
+                    >
                       <strong>Version:</strong>{" "}
                       {connector.version || "N/A"}
                     </span>
 
-                    <span>
+                    <span
+                      style={{
+                        overflowWrap: "anywhere",
+                      }}
+                    >
                       <strong>Last Seen:</strong>{" "}
                       {connector.last_seen
                         ? new Date(
@@ -410,6 +457,8 @@ export default function ConnectorStatusCard() {
                     minWidth: "125px",
                     textAlign: "center",
                     boxSizing: "border-box",
+                    flexShrink: 0,
+                    whiteSpace: "nowrap",
                   }}
                 >
                   {getStatusIndicator(

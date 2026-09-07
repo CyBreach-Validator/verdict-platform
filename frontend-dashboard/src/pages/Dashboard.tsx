@@ -122,83 +122,41 @@ function Dashboard() {
   );
 
   return (
-    <div style={{ padding: "30px" }}>
-      <h1>CyBreach Validator Dashboard</h1>
+    <div className="dashboard-container">
+      <h1 className="dashboard-title">CyBreach Validator Dashboard</h1>
 
       <button
         onClick={handleLogout}
-        style={{
-          marginBottom: "20px",
-          padding: "8px 16px",
-          cursor: "pointer",
-        }}
+        className="dashboard-logout"
       >
         Logout
       </button>
 
       {/* Summary Cards */}
-      <div
-        style={{
-          display: "flex",
-          gap: "20px",
-          marginBottom: "30px",
-          flexWrap: "wrap",
-        }}
-      >
-        <div
-          style={{
-            border: "1px solid #ccc",
-            borderRadius: "8px",
-            padding: "20px",
-            width: "180px",
-            backgroundColor: "#f8f9fa",
-          }}
-        >
-          <h3>Total Verdicts</h3>
-          <h1>{verdicts.length}</h1>
+      <div className="summary-cards">
+      
+        <div className="summary-card">
+         <h3>Total Verdicts</h3>
+         <h1>{verdicts.length}</h1>
         </div>
 
-        <div
-          style={{
-            border: "1px solid green",
-            borderRadius: "8px",
-            padding: "20px",
-            width: "180px",
-            backgroundColor: "#f0fff4",
-          }}
-        >
+        <div className="summary-card detected-card">
           <h3>Detected</h3>
           <h1 style={{ color: "green" }}>{detectedCount}</h1>
         </div>
 
-        <div
-          style={{
-            border: "1px solid red",
-            borderRadius: "8px",
-            padding: "20px",
-            width: "180px",
-            backgroundColor: "#fff5f5",
-          }}
-        >
+        <div className="summary-card missed-card">
           <h3>Missed</h3>
           <h1 style={{ color: "red" }}>{missedCount}</h1>
         </div>
 
-        <div
-          style={{
-            border: "1px solid orange",
-            borderRadius: "8px",
-            padding: "20px",
-            width: "180px",
-            backgroundColor: "#fffaf0",
-          }}
-        >
+       <div className="summary-card partial-card">
           <h3>Partial</h3>
           <h1 style={{ color: "orange" }}>{partialCount}</h1>
         </div>
       </div>
       <ConnectorStatusCard />
-      <h2>Verdicts</h2>
+      <h2 className="section-title">Verdicts</h2>
 
       <VerdictFilter
         selectedStatus={selectedStatus}
@@ -208,29 +166,18 @@ function Dashboard() {
         }}
       />
 
-      <div
-  style={{
-    marginBottom: "20px",
-    display: "flex",
-    gap: "10px",
-  }}
->
+     <div className="export-buttons">
+
   <button
     onClick={exportCSV}
-    style={{
-      padding: "8px 16px",
-      cursor: "pointer",
-    }}
+    className="export-button"
   >
     Export CSV
   </button>
 
-  <button
+    <button
     onClick={exportPDF}
-    style={{
-      padding: "8px 16px",
-      cursor: "pointer",
-    }}
+    className="export-button"
   >
     Export PDF
   </button>

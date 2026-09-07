@@ -7,8 +7,7 @@ class VerdictWebSocket {
     onClose?: () => void
   ) {
 
-    this.socket = new WebSocket("ws://127.0.0.1:8033/ws/verdicts");
-
+    this.socket = new WebSocket("ws://127.0.0.1:8000/ws/verdicts");
     this.socket.onopen = () => {
 
       console.log("✅ Connected to Verdict WebSocket");

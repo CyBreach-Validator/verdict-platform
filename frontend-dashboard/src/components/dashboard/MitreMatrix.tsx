@@ -5,25 +5,99 @@ import type { CoverageItem } from "../../services/dashboardService";
 
 type StatusFilter = "All" | "Detected" | "Partial" | "Missed";
 
+function getStatusLabel(item: CoverageItem): StatusFilter {
+  if (
+    item.detected > item.missed &&
+    item.detected >= item.partial
+  ) {
+    return "Detected";
+  }
+
+  if (
+    item.missed > item.detected &&
+    item.missed >= item.partial
+  ) {
+    return "Missed";
+  }
+
+  return "Partial";
+}
+
+function getStatusClasses(status: StatusFilter) {
+  switch (status) {
+    case "Detected":
+      return {
+        card: "border-green-500 bg-green-50",
+        badge: "border-green-300 bg-green-100 text-green-700",
+        dot: "bg-green-500",
+      };
+
+    case "Partial":
+      return {
+        card: "border-yellow-500 bg-yellow-50",
+        badge: "border-yellow-300 bg-yellow-100 text-yellow-700",
+        dot: "bg-yellow-500",
+      };
+
+    case "Missed":
+      return {
+        card: "border-red-500 bg-red-50",
+        badge: "border-red-300 bg-red-100 text-red-700",
+        dot: "bg-red-500",
+      };
+
+    default:
+      return {
+        card: "border-gray-300 bg-gray-50",
+        badge: "border-gray-300 bg-gray-100 text-gray-700",
+        dot: "bg-gray-500",
+      };
+  }
+}
+
+function getItemKey(item: CoverageItem) {
+  return `${item.tactic}-${item.technique}-${item.rule_name}`;
+}
+
 export default function MitreMatrix() {
   const [coverage, setCoverage] = useState<CoverageItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [statusFilter, setStatusFilter] =
     useState<StatusFilter>("All");
+
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedTechnique, setSelectedTechnique] =
+
+  const [selectedKey, setSelectedKey] =
     useState<string | null>(null);
 
   useEffect(() => {
-    getDetectionCoverage()
-      .then(setCoverage)
-      .catch((error) => {
-        console.error("Error loading MITRE coverage:", error);
-      });
+    const loadCoverage = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const data = await getDetectionCoverage();
+
+        setCoverage(data);
+      } catch (err) {
+        console.error(
+          "Error loading MITRE coverage:",
+          err
+        );
+
+        setError(
+          "Unable to load MITRE coverage data."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCoverage();
   }, []);
 
-  /*
-   * Build the tactic list dynamically from backend data.
-   */
   const tactics = useMemo(() => {
     return Array.from(
       new Set(
@@ -34,310 +108,525 @@ export default function MitreMatrix() {
     ).sort();
   }, [coverage]);
 
-  /*
-   * Filter techniques by status and search.
-   */
   const filteredCoverage = useMemo(() => {
     const search = searchTerm.trim().toLowerCase();
 
     return coverage.filter((item) => {
+      const calculatedStatus =
+        getStatusLabel(item);
+
       const matchesStatus =
         statusFilter === "All" ||
-        item.status === statusFilter;
+        calculatedStatus === statusFilter;
 
       const matchesSearch =
         search === "" ||
-        item.technique.toLowerCase().includes(search) ||
-        item.name.toLowerCase().includes(search) ||
-        item.rule_name.toLowerCase().includes(search) ||
-        item.status.toLowerCase().includes(search) ||
-        (search === "detected" && item.detected > 0) ||
-        (search === "partial" && item.partial > 0) ||
-        (search === "missed" && item.missed > 0);
+        item.technique
+          .toLowerCase()
+          .includes(search) ||
+        item.name
+          .toLowerCase()
+          .includes(search) ||
+        item.rule_name
+          .toLowerCase()
+          .includes(search) ||
+        item.tactic
+          .toLowerCase()
+          .includes(search) ||
+        calculatedStatus
+          .toLowerCase()
+          .includes(search) ||
+        (search === "detected" &&
+          item.detected > 0) ||
+        (search === "partial" &&
+          item.partial > 0) ||
+        (search === "missed" &&
+          item.missed > 0);
 
-      return matchesStatus && matchesSearch;
+      return (
+        matchesStatus &&
+        matchesSearch
+      );
     });
-  }, [coverage, statusFilter, searchTerm]);
+  }, [
+    coverage,
+    statusFilter,
+    searchTerm,
+  ]);
 
   const selectedItem = coverage.find(
-    (item) => item.technique === selectedTechnique
+    (item) =>
+      getItemKey(item) === selectedKey
   );
 
-  const getColor = (status: string) => {
-    switch (status) {
-      case "Detected":
-        return "#d1fae5";
-
-      case "Partial":
-        return "#fef3c7";
-
-      case "Missed":
-        return "#fee2e2";
-
-      default:
-        return "#f3f4f6";
-    }
+  const clearFilters = () => {
+    setStatusFilter("All");
+    setSearchTerm("");
+    setSelectedKey(null);
   };
 
-  const getBorderColor = (status: string) => {
-    switch (status) {
-      case "Detected":
-        return "#10b981";
-
-      case "Partial":
-        return "#f59e0b";
-
-      case "Missed":
-        return "#ef4444";
-
-      default:
-        return "#d1d5db";
-    }
-  };
-
-  return (
-    <div style={{ marginTop: 40 }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 16,
-          gap: 16,
-          flexWrap: "wrap",
-        }}
-      >
-        <div>
-          <h2>MITRE ATT&CK Matrix</h2>
+  if (loading) {
+    return (
+      <section className="mt-8 w-full min-w-0">
+        <div className="rounded-lg border bg-white p-6">
+          <h2 className="text-xl font-semibold">
+            MITRE ATT&CK Matrix
+          </h2>
 
           <p
-            style={{
-              color: "#6b7280",
-              fontSize: 14,
-              marginTop: 4,
-            }}
+            className="mt-2 text-sm text-gray-600"
+            role="status"
           >
-            Detection coverage mapped to MITRE ATT&CK tactics
-            and techniques.
+            Loading MITRE coverage...
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="mt-8 w-full min-w-0">
+        <div
+          className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-700"
+          role="alert"
+        >
+          {error}
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="mt-8 w-full min-w-0">
+      {/* Header */}
+      <div className="mb-5 flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-xl font-semibold">
+            MITRE ATT&CK Matrix
+          </h2>
+
+          <p className="mt-1 max-w-3xl break-words text-sm text-gray-600">
+            Detection coverage mapped to MITRE ATT&CK
+            tactics and techniques.
           </p>
         </div>
 
-        <select
-          value={statusFilter}
-          onChange={(event) =>
-            setStatusFilter(
-              event.target.value as StatusFilter
-            )
-          }
-          style={{
-            padding: "8px 12px",
-            border: "1px solid #d1d5db",
-            borderRadius: 6,
-            background: "white",
-          }}
-        >
-          <option value="All">All Statuses</option>
-          <option value="Detected">Detected</option>
-          <option value="Partial">Partial</option>
-          <option value="Missed">Missed</option>
-        </select>
+        <div className="w-full shrink-0 lg:w-52">
+          <label
+            htmlFor="mitre-status"
+            className="mb-1 block text-sm font-medium text-gray-700"
+          >
+            Status
+          </label>
+
+          <select
+            id="mitre-status"
+            value={statusFilter}
+            onChange={(event) =>
+              setStatusFilter(
+                event.target.value as StatusFilter
+              )
+            }
+            className="
+              w-full
+              rounded-md
+              border
+              border-gray-300
+              bg-white
+              px-3
+              py-2
+              text-sm
+              outline-none
+              transition
+              focus:border-blue-500
+              focus:ring-2
+              focus:ring-blue-200
+            "
+          >
+            <option value="All">
+              All Statuses
+            </option>
+
+            <option value="Detected">
+              Detected
+            </option>
+
+            <option value="Partial">
+              Partial
+            </option>
+
+            <option value="Missed">
+              Missed
+            </option>
+          </select>
+        </div>
       </div>
 
-      {/* Search */}
-      <div style={{ marginBottom: 20 }}>
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(event) =>
-            setSearchTerm(event.target.value)
-          }
-          placeholder="Search technique, tactic or rule..."
-          style={{
-            width: "100%",
-            maxWidth: 500,
-            padding: "10px 12px",
-            border: "1px solid #d1d5db",
-            borderRadius: 6,
-          }}
-        />
+      {/* Search and Filter Summary */}
+      <div
+        className="
+          mb-5
+          rounded-lg
+          border
+          bg-gray-50
+          p-4
+        "
+      >
+        <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-end">
+          <div className="min-w-0 flex-1">
+            <label
+              htmlFor="mitre-search"
+              className="mb-1 block text-sm font-medium text-gray-700"
+            >
+              Search
+            </label>
+
+            <input
+              id="mitre-search"
+              type="text"
+              value={searchTerm}
+              onChange={(event) =>
+                setSearchTerm(
+                  event.target.value
+                )
+              }
+              placeholder="Search technique, tactic or rule..."
+              className="
+                w-full
+                min-w-0
+                rounded-md
+                border
+                border-gray-300
+                bg-white
+                px-3
+                py-2
+                text-sm
+                outline-none
+                transition
+                focus:border-blue-500
+                focus:ring-2
+                focus:ring-blue-200
+              "
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={clearFilters}
+            disabled={
+              statusFilter === "All" &&
+              searchTerm === "" &&
+              selectedKey === null
+            }
+            className="
+              w-full
+              shrink-0
+              rounded-md
+              border
+              border-gray-300
+              bg-white
+              px-4
+              py-2
+              text-sm
+              font-medium
+              text-gray-700
+              transition
+              hover:bg-gray-100
+              focus:outline-none
+              focus:ring-2
+              focus:ring-blue-500
+              disabled:cursor-not-allowed
+              disabled:opacity-50
+              md:w-auto
+            "
+          >
+            Clear Filters
+          </button>
+        </div>
+
+        <div className="mt-3 text-xs text-gray-500">
+          Showing{" "}
+          <span className="font-semibold text-gray-700">
+            {filteredCoverage.length}
+          </span>{" "}
+          of{" "}
+          <span className="font-semibold text-gray-700">
+            {coverage.length}
+          </span>{" "}
+          techniques
+        </div>
       </div>
 
       {/* Legend */}
-      <div
-        style={{
-          display: "flex",
-          gap: 20,
-          flexWrap: "wrap",
-          marginBottom: 20,
-          fontSize: 14,
-        }}
-      >
-        <span>🟢 Detected</span>
-        <span>🟡 Partial</span>
-        <span>🔴 Missed</span>
+      <div className="mb-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-gray-700">
+        <div className="flex items-center gap-2">
+          <span
+            className="h-3 w-3 shrink-0 rounded-full bg-green-500"
+            aria-hidden="true"
+          />
+          <span>Detected</span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span
+            className="h-3 w-3 shrink-0 rounded-full bg-yellow-500"
+            aria-hidden="true"
+          />
+          <span>Partial</span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span
+            className="h-3 w-3 shrink-0 rounded-full bg-red-500"
+            aria-hidden="true"
+          />
+          <span>Missed</span>
+        </div>
       </div>
 
       {/* Matrix */}
       {filteredCoverage.length === 0 ? (
-        <div
-          style={{
-            border: "1px solid #d1d5db",
-            borderRadius: 8,
-            padding: 24,
-            textAlign: "center",
-            color: "#6b7280",
-          }}
-        >
-          No MITRE coverage data matches the selected filters.
+        <div className="rounded-lg border bg-white p-6 text-center text-sm text-gray-600">
+          No MITRE coverage data matches the selected
+          filters.
         </div>
       ) : (
         <div
-          style={{
-            display: "grid",
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(260px, 1fr))",
-            gap: 20,
-          }}
+          className="
+            grid
+            min-w-0
+            grid-cols-1
+            gap-5
+            md:grid-cols-2
+            xl:grid-cols-3
+          "
         >
           {tactics.map((tactic) => {
-            const tacticItems = filteredCoverage.filter(
-              (item) => item.tactic === tactic
-            );
+            const tacticItems =
+              filteredCoverage.filter(
+                (item) =>
+                  item.tactic === tactic
+              );
 
             if (tacticItems.length === 0) {
               return null;
             }
 
             return (
-              <div key={tactic}>
-                <h3
-                  style={{
-                    marginBottom: 12,
-                    fontSize: 18,
-                    fontWeight: 600,
-                  }}
-                >
-                  {tactic}
-                </h3>
+              <div
+                key={tactic}
+                className="
+                  min-w-0
+                  rounded-lg
+                  border
+                  border-gray-200
+                  bg-white
+                  p-4
+                  shadow-sm
+                "
+              >
+                {/* Tactic Header */}
+                <div className="mb-4 min-w-0 border-b border-gray-200 pb-3">
+                  <h3 className="break-words text-base font-semibold text-gray-900">
+                    {tactic}
+                  </h3>
 
-                {tacticItems.map((item) => {
-                  const isSelected =
-                    selectedTechnique === item.technique;
+                  <p className="mt-1 text-xs text-gray-500">
+                    {tacticItems.length}{" "}
+                    {tacticItems.length === 1
+                      ? "technique"
+                      : "techniques"}
+                  </p>
+                </div>
 
-                  return (
-                    <button
-                      key={`${item.technique}-${item.rule_name}`}
-                      type="button"
-                      onClick={() =>
-                        setSelectedTechnique(
-                          item.technique
-                        )
-                      }
-                      style={{
-                        width: "100%",
-                        textAlign: "left",
-                        background: getColor(item.status),
-                        border: `2px solid ${getBorderColor(
-                          item.status
-                        )}`,
-                        borderRadius: 8,
-                        padding: 14,
-                        marginBottom: 12,
-                        cursor: "pointer",
-                        boxShadow: isSelected
-                          ? "0 0 0 2px #3b82f6"
-                          : "none",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent:
-                            "space-between",
-                          gap: 8,
-                        }}
+                {/* Technique Cards */}
+                <div className="space-y-3">
+                  {tacticItems.map((item) => {
+                    const calculatedStatus =
+                      getStatusLabel(item);
+
+                    const statusClasses =
+                      getStatusClasses(
+                        calculatedStatus
+                      );
+
+                    const itemKey =
+                      getItemKey(item);
+
+                    const isSelected =
+                      selectedKey === itemKey;
+
+                    return (
+                      <button
+                        key={itemKey}
+                        type="button"
+                        onClick={() =>
+                          setSelectedKey(
+                            itemKey
+                          )
+                        }
+                        aria-pressed={isSelected}
+                        className={`
+                          block
+                          w-full
+                          min-w-0
+                          rounded-lg
+                          border-2
+                          p-4
+                          text-left
+                          transition
+                          hover:shadow-md
+                          focus:outline-none
+                          focus-visible:ring-2
+                          focus-visible:ring-blue-500
+                          focus-visible:ring-offset-2
+                          ${statusClasses.card}
+                          ${
+                            isSelected
+                              ? "ring-2 ring-blue-500 ring-offset-1"
+                              : ""
+                          }
+                        `}
                       >
-                        <strong>
-                          {item.technique}
-                        </strong>
-
-                        <span
-                          style={{
-                            fontSize: 12,
-                            fontWeight: 600,
-                            background: "white",
-                            padding: "3px 7px",
-                            borderRadius: 999,
-                          }}
+                        {/* Technique Header */}
+                        <div
+                          className="
+                            flex
+                            min-w-0
+                            items-start
+                            justify-between
+                            gap-3
+                          "
                         >
-                          {item.status}
-                        </span>
-                      </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="break-words text-sm font-bold text-gray-900">
+                              {item.technique}
+                            </div>
+                          </div>
 
-                      <div
-                        style={{
-                          marginTop: 6,
-                          fontSize: 14,
-                        }}
-                      >
-                        {item.name}
-                      </div>
+                          <span
+                            className={`
+                              inline-flex
+                              shrink-0
+                              items-center
+                              gap-1.5
+                              rounded-full
+                              border
+                              px-2
+                              py-1
+                              text-xs
+                              font-semibold
+                              ${statusClasses.badge}
+                            `}
+                          >
+                            <span
+                              className={`
+                                h-2
+                                w-2
+                                shrink-0
+                                rounded-full
+                                ${statusClasses.dot}
+                              `}
+                              aria-hidden="true"
+                            />
 
-                      <div
-                        style={{
-                          marginTop: 8,
-                          fontSize: 12,
-                          color: "#4b5563",
-                        }}
-                      >
-                        Rule: {item.rule_name}
-                      </div>
-                    </button>
-                  );
-                })}
+                            {calculatedStatus}
+                          </span>
+                        </div>
+
+                        {/* Technique Name */}
+                        <div className="mt-3 min-w-0 break-words text-sm font-medium leading-5 text-gray-800">
+                          {item.name}
+                        </div>
+
+                        {/* Rule */}
+                        <div className="mt-3 min-w-0 break-words text-xs leading-5 text-gray-600">
+                          <span className="font-semibold text-gray-700">
+                            Rule:
+                          </span>{" "}
+                          {item.rule_name}
+                        </div>
+
+                        {/* Counts */}
+                        <div className="mt-4 grid grid-cols-3 gap-2 border-t border-gray-200/70 pt-3">
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold text-gray-900">
+                              {item.detected}
+                            </div>
+
+                            <div className="text-[11px] text-gray-500">
+                              Detected
+                            </div>
+                          </div>
+
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold text-gray-900">
+                              {item.partial}
+                            </div>
+
+                            <div className="text-[11px] text-gray-500">
+                              Partial
+                            </div>
+                          </div>
+
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold text-gray-900">
+                              {item.missed}
+                            </div>
+
+                            <div className="text-[11px] text-gray-500">
+                              Missed
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             );
           })}
         </div>
       )}
 
-      {/* Selected technique */}
+      {/* Selected Technique */}
       {selectedItem && (
         <div
-          style={{
-            marginTop: 24,
-            border: "1px solid #d1d5db",
-            borderRadius: 8,
-            padding: 20,
-            background: "white",
-          }}
+          className="
+            mt-6
+            min-w-0
+            rounded-lg
+            border
+            border-gray-200
+            bg-white
+            p-4
+            shadow-sm
+            sm:p-5
+          "
         >
+          {/* Selected Header */}
           <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              gap: 16,
-            }}
+            className="
+              flex
+              min-w-0
+              flex-col
+              gap-4
+              sm:flex-row
+              sm:items-start
+              sm:justify-between
+            "
           >
-            <div>
-              <h3>Selected Technique</h3>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-gray-500">
+                Selected Technique
+              </p>
 
-              <h4
-                style={{
-                  marginTop: 6,
-                  fontSize: 20,
-                }}
-              >
+              <h3 className="mt-1 break-words text-xl font-bold text-gray-900">
                 {selectedItem.technique}
-              </h4>
+              </h3>
 
-              <p
-                style={{
-                  color: "#6b7280",
-                  marginTop: 4,
-                }}
-              >
+              <p className="mt-1 break-words text-sm text-gray-600">
                 {selectedItem.name}
               </p>
             </div>
@@ -345,61 +634,109 @@ export default function MitreMatrix() {
             <button
               type="button"
               onClick={() =>
-                setSelectedTechnique(null)
+                setSelectedKey(null)
               }
-              style={{
-                padding: "6px 12px",
-                border: "1px solid #d1d5db",
-                borderRadius: 6,
-                background: "white",
-                cursor: "pointer",
-              }}
+              className="
+                w-full
+                shrink-0
+                rounded-md
+                border
+                border-gray-300
+                bg-white
+                px-3
+                py-2
+                text-sm
+                font-medium
+                text-gray-700
+                transition
+                hover:bg-gray-100
+                focus:outline-none
+                focus:ring-2
+                focus:ring-blue-500
+                sm:w-auto
+              "
             >
               Clear
             </button>
           </div>
 
+          {/* Selected Details */}
           <div
-            style={{
-              display: "grid",
-              gridTemplateColumns:
-                "repeat(auto-fit, minmax(160px, 1fr))",
-              gap: 16,
-              marginTop: 20,
-            }}
+            className="
+              mt-5
+              grid
+              min-w-0
+              grid-cols-1
+              gap-4
+              sm:grid-cols-2
+              lg:grid-cols-3
+              xl:grid-cols-6
+            "
           >
-            <div>
-              <small>MITRE Tactic</small>
-              <div>{selectedItem.tactic}</div>
+            <div className="min-w-0">
+              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                MITRE Tactic
+              </p>
+
+              <p className="mt-1 break-words text-sm font-medium text-gray-900">
+                {selectedItem.tactic}
+              </p>
             </div>
 
-            <div>
-              <small>Rule</small>
-              <div>{selectedItem.rule_name}</div>
+            <div className="min-w-0 xl:col-span-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                Rule
+              </p>
+
+              <p className="mt-1 break-words text-sm font-medium text-gray-900">
+                {selectedItem.rule_name}
+              </p>
             </div>
 
-            <div>
-              <small>Status</small>
-              <div>{selectedItem.status}</div>
+            <div className="min-w-0">
+              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                Status
+              </p>
+
+              <p className="mt-1 text-sm font-semibold text-gray-900">
+                {getStatusLabel(
+                  selectedItem
+                )}
+              </p>
             </div>
 
-            <div>
-              <small>Detection Count</small>
-              <div>{selectedItem.detected}</div>
+            <div className="min-w-0">
+              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                Detected
+              </p>
+
+              <p className="mt-1 text-sm font-semibold text-gray-900">
+                {selectedItem.detected}
+              </p>
             </div>
 
-            <div>
-              <small>Partial Count</small>
-              <div>{selectedItem.partial}</div>
+            <div className="min-w-0">
+              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                Partial
+              </p>
+
+              <p className="mt-1 text-sm font-semibold text-gray-900">
+                {selectedItem.partial}
+              </p>
             </div>
 
-            <div>
-              <small>Missed Count</small>
-              <div>{selectedItem.missed}</div>
+            <div className="min-w-0">
+              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                Missed
+              </p>
+
+              <p className="mt-1 text-sm font-semibold text-gray-900">
+                {selectedItem.missed}
+              </p>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }

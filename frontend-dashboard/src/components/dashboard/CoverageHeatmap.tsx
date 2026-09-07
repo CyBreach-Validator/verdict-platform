@@ -17,7 +17,7 @@ function getStatusColor(item: CoverageItem) {
   return "bg-yellow-50 border-yellow-500";
 }
 
-function getStatusLabel(item: CoverageItem) {
+function getStatusLabel(item: CoverageItem): StatusFilter {
   if (item.detected > item.missed && item.detected >= item.partial) {
     return "Detected";
   }
@@ -52,7 +52,8 @@ export default function CoverageHeatmap() {
   const [searchTerm, setSearchTerm] =
     useState("");
 
-  const [appliedSearchTerm, setAppliedSearchTerm] = useState("");
+  const [appliedSearchTerm, setAppliedSearchTerm] =
+    useState("");
 
   const [selectedTechnique, setSelectedTechnique] =
     useState<string | null>(null);
@@ -106,7 +107,7 @@ export default function CoverageHeatmap() {
         (search === "detected" && item.detected > 0) ||
         (search === "partial" && item.partial > 0) ||
         (search === "missed" && item.missed > 0);
-      
+
       return (
         matchesStatus &&
         matchesTactic &&
@@ -117,7 +118,7 @@ export default function CoverageHeatmap() {
     coverage,
     statusFilter,
     tacticFilter,
-    searchTerm,
+    appliedSearchTerm,
   ]);
 
   const selectedItem = coverage.find(
@@ -126,7 +127,7 @@ export default function CoverageHeatmap() {
 
   if (loading) {
     return (
-      <div className="mt-8">
+      <div className="mt-8 min-w-0">
         <h2 className="text-xl font-semibold mb-4">
           Detection Coverage Heatmap
         </h2>
@@ -137,13 +138,14 @@ export default function CoverageHeatmap() {
   }
 
   return (
-    <div className="mt-8">
+    <div className="mt-8 min-w-0 w-full">
+      {/* Header */}
       <div className="flex flex-col gap-2 mb-5">
         <h2 className="text-xl font-semibold">
           Detection Coverage Heatmap
         </h2>
 
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-gray-600 break-words">
           Interactive view of detection coverage across
           ATT&CK techniques and validation verdicts.
         </p>
@@ -163,7 +165,8 @@ export default function CoverageHeatmap() {
           bg-gray-50
         "
       >
-        <div>
+        {/* Search */}
+        <div className="min-w-0">
           <label
             htmlFor="coverage-search"
             className="block text-sm font-medium mb-1"
@@ -176,27 +179,31 @@ export default function CoverageHeatmap() {
             type="text"
             value={searchTerm}
             onChange={(event) =>
-            setSearchTerm(event.target.value)
-          }
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              setAppliedSearchTerm(searchTerm);
-          }
-        }}
-        placeholder="Search technique, rule, or verdict..."
-        className="
-          w-full
-          border
-          rounded-md
-          px-3
-          py-2
-          bg-white
-        "
-      />
-          
+              setSearchTerm(event.target.value)
+            }
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                setAppliedSearchTerm(searchTerm);
+              }
+            }}
+            placeholder="Search technique, rule, or verdict..."
+            className="
+              w-full
+              min-w-0
+              border
+              rounded-md
+              px-3
+              py-2
+              bg-white
+              focus:outline-none
+              focus:ring-2
+              focus:ring-blue-500
+            "
+          />
         </div>
 
-        <div>
+        {/* Status */}
+        <div className="min-w-0">
           <label
             htmlFor="coverage-status"
             className="block text-sm font-medium mb-1"
@@ -214,11 +221,15 @@ export default function CoverageHeatmap() {
             }
             className="
               w-full
+              min-w-0
               border
               rounded-md
               px-3
               py-2
               bg-white
+              focus:outline-none
+              focus:ring-2
+              focus:ring-blue-500
             "
           >
             <option value="All">All</option>
@@ -228,7 +239,8 @@ export default function CoverageHeatmap() {
           </select>
         </div>
 
-        <div>
+        {/* Tactic */}
+        <div className="min-w-0">
           <label
             htmlFor="coverage-tactic"
             className="block text-sm font-medium mb-1"
@@ -244,11 +256,15 @@ export default function CoverageHeatmap() {
             }
             className="
               w-full
+              min-w-0
               border
               rounded-md
               px-3
               py-2
               bg-white
+              focus:outline-none
+              focus:ring-2
+              focus:ring-blue-500
             "
           >
             <option value="All">All Tactics</option>
@@ -265,24 +281,24 @@ export default function CoverageHeatmap() {
       {/* Legend */}
       <div className="flex flex-wrap gap-4 mb-5 text-sm">
         <div className="flex items-center gap-2">
-          <span className="w-4 h-4 rounded bg-green-200 border border-green-500" />
+          <span className="w-4 h-4 rounded bg-green-200 border border-green-500 shrink-0" />
           Detected
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="w-4 h-4 rounded bg-yellow-200 border border-yellow-500" />
+          <span className="w-4 h-4 rounded bg-yellow-200 border border-yellow-500 shrink-0" />
           Partial
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="w-4 h-4 rounded bg-red-200 border border-red-500" />
+          <span className="w-4 h-4 rounded bg-red-200 border border-red-500 shrink-0" />
           Missed
         </div>
       </div>
 
       {/* Heatmap */}
       {filteredCoverage.length === 0 ? (
-        <div className="border rounded-lg p-6 text-center text-gray-600">
+        <div className="border rounded-lg p-6 text-center text-gray-600 break-words">
           No coverage data matches the selected filters.
         </div>
       ) : (
@@ -312,10 +328,12 @@ export default function CoverageHeatmap() {
                   setSelectedTechnique(item.technique)
                 }
                 className={`
+                  min-w-0
+                  w-full
                   text-left
                   border
                   rounded-lg
-                  p-5
+                  p-4 sm:p-5
                   transition
                   hover:shadow-md
                   cursor-pointer
@@ -327,34 +345,62 @@ export default function CoverageHeatmap() {
                   }
                 `}
               >
-                <div className="flex justify-between items-start gap-3">
-                  <div>
-                    <h3 className="text-lg font-bold">
+                {/* Card Header */}
+                <div
+                  className="
+                    flex
+                    flex-col
+                    sm:flex-row
+                    sm:justify-between
+                    sm:items-start
+                    gap-2
+                    sm:gap-3
+                    min-w-0
+                  "
+                >
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-lg font-bold break-words">
                       {item.technique}
                     </h3>
 
-                    <p className="text-sm text-gray-700">
+                    <p className="text-sm text-gray-700 break-words">
                       {item.name}
                     </p>
                   </div>
 
-                  <span className="text-xs font-semibold border rounded-full px-2 py-1 bg-white">
+                  <span
+                    className="
+                      self-start
+                      shrink-0
+                      text-xs
+                      font-semibold
+                      border
+                      rounded-full
+                      px-2
+                      py-1
+                      bg-white
+                    "
+                  >
                     {status}
                   </span>
                 </div>
 
-                <p className="text-sm mt-3 font-medium">
+                {/* Rule */}
+                <p className="text-sm mt-3 font-medium break-words">
                   Rule: {item.rule_name}
                 </p>
 
-                <p className="text-xs text-gray-600 mt-1">
+                {/* Tactic */}
+                <p className="text-xs text-gray-600 mt-1 break-words">
                   Tactic: {item.tactic}
                 </p>
 
+                {/* Coverage */}
                 <div className="mt-4">
-                  <div className="flex justify-between text-sm mb-1">
+                  <div className="flex justify-between gap-2 text-sm mb-1">
                     <span>Detection Coverage</span>
-                    <span className="font-semibold">
+
+                    <span className="font-semibold shrink-0">
                       {coveragePercentage}%
                     </span>
                   </div>
@@ -369,29 +415,33 @@ export default function CoverageHeatmap() {
                   </div>
                 </div>
 
+                {/* Counts */}
                 <div className="grid grid-cols-3 gap-2 mt-4 text-sm">
-                  <div>
+                  <div className="min-w-0">
                     <div className="font-semibold">
                       {item.detected}
                     </div>
+
                     <div className="text-xs text-gray-600">
                       Detected
                     </div>
                   </div>
 
-                  <div>
+                  <div className="min-w-0">
                     <div className="font-semibold">
                       {item.partial}
                     </div>
+
                     <div className="text-xs text-gray-600">
                       Partial
                     </div>
                   </div>
 
-                  <div>
+                  <div className="min-w-0">
                     <div className="font-semibold">
                       {item.missed}
                     </div>
+
                     <div className="text-xs text-gray-600">
                       Missed
                     </div>
@@ -405,18 +455,27 @@ export default function CoverageHeatmap() {
 
       {/* Selected Technique Details */}
       {selectedItem && (
-        <div className="mt-6 border rounded-lg p-5 bg-white shadow-sm">
-          <div className="flex justify-between items-start gap-4">
-            <div>
+        <div className="mt-6 border rounded-lg p-4 sm:p-5 bg-white shadow-sm">
+          <div
+            className="
+              flex
+              flex-col
+              sm:flex-row
+              sm:justify-between
+              sm:items-start
+              gap-4
+            "
+          >
+            <div className="min-w-0">
               <h3 className="text-lg font-semibold">
                 Selected Technique
               </h3>
 
-              <p className="text-xl font-bold mt-1">
+              <p className="text-xl font-bold mt-1 break-words">
                 {selectedItem.technique}
               </p>
 
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 break-words">
                 {selectedItem.name}
               </p>
             </div>
@@ -427,6 +486,8 @@ export default function CoverageHeatmap() {
                 setSelectedTechnique(null)
               }
               className="
+                self-start
+                shrink-0
                 px-3
                 py-1
                 border
@@ -439,38 +500,47 @@ export default function CoverageHeatmap() {
             </button>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-5">
-            <div>
+          <div
+            className="
+              grid
+              grid-cols-1
+              sm:grid-cols-2
+              md:grid-cols-4
+              gap-4
+              mt-5
+            "
+          >
+            <div className="min-w-0">
               <p className="text-xs text-gray-500">
                 Tactic
               </p>
 
-              <p className="font-medium">
+              <p className="font-medium break-words">
                 {selectedItem.tactic}
               </p>
             </div>
 
-            <div>
+            <div className="min-w-0">
               <p className="text-xs text-gray-500">
                 Rule
               </p>
 
-              <p className="font-medium">
+              <p className="font-medium break-words">
                 {selectedItem.rule_name}
               </p>
             </div>
 
-            <div>
+            <div className="min-w-0">
               <p className="text-xs text-gray-500">
                 Status
               </p>
 
-              <p className="font-medium">
+              <p className="font-medium break-words">
                 {getStatusLabel(selectedItem)}
               </p>
             </div>
 
-            <div>
+            <div className="min-w-0">
               <p className="text-xs text-gray-500">
                 Coverage
               </p>
