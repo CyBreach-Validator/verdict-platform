@@ -2,12 +2,12 @@ _format_version: "3.0"
 
 services:
   - name: backend-service
-    url: http://host.docker.internal:8000
+    url: http://host.docker.internal:8033
 
     plugins:
       - name: rate-limiting
         config:
-          minute: 5
+          minute: 50
           policy: local
           limit_by: ip
           fault_tolerant: true
@@ -49,3 +49,20 @@ services:
         paths:
           - /audit-logs
         strip_path: false
+
+      - name: dashboard-route
+        paths:
+          - /dashboard
+        strip_path: false
+
+      - name: connectors-route
+        paths:
+          - /connectors
+        strip_path: false
+      
+      - name: validator-route
+        paths:
+          - /validator
+        strip_path: false
+        methods:
+          - POST
