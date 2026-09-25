@@ -2,7 +2,11 @@ import json
 from kafka import KafkaProducer
 from kafka.errors import KafkaError
 
+from app.kafka.config import VERDICT_TOPIC, GAP_CLOSED_TOPIC
+
+
 producer = None
+
 
 try:
     producer = KafkaProducer(
@@ -10,6 +14,7 @@ try:
         value_serializer=lambda v: json.dumps(v).encode("utf-8")
     )
     print("✅ Connected to Kafka")
+
 except Exception as e:
     print(f"⚠️ Kafka is not available: {e}")
 
@@ -17,13 +22,16 @@ except Exception as e:
 def publish_verdict(verdict: dict):
     if producer:
         try:
-            producer.send("verdict-events", verdict)
+            producer.send(VERDICT_TOPIC, verdict)
             producer.flush()
             print("✅ Verdict published to Kafka")
+
         except KafkaError as e:
             print(f"❌ Failed to publish verdict: {e}")
+
     else:
         print("⚠️ Kafka producer not initialized. Skipping publish.")
+
 
 def publish_corrected_verdict(verdict: dict):
     """
@@ -32,13 +40,16 @@ def publish_corrected_verdict(verdict: dict):
 
     if producer:
         try:
-            producer.send("verdict-events", verdict)
+            producer.send(VERDICT_TOPIC, verdict)
             producer.flush()
             print("✅ Corrected verdict published to Kafka")
+
         except KafkaError as e:
             print(f"❌ Failed to publish corrected verdict: {e}")
+
     else:
         print("⚠️ Kafka producer not initialized.")
+
 
 def publish_gap_closed_event(event: dict):
     """
@@ -48,13 +59,12 @@ def publish_gap_closed_event(event: dict):
 
     if producer:
         try:
-            producer.send("verdict-events", event)
+            producer.send(GAP_CLOSED_TOPIC, event)
             producer.flush()
-
-            print("Gap-closed event published to Kafka")
+            print("✅ Gap-closed event published to Kafka")
 
         except KafkaError as e:
-            print(f"Failed to publish gap-closed event: {e}")
+            print(f"❌ Failed to publish gap-closed event: {e}")
 
     else:
-        print("Kafka producer not initialized. Skipping gap-closed event.")
+        print("⚠️ Kafka producer not initialized. Skipping gap-closed event.")

@@ -52,13 +52,15 @@ async def validate(
 
     # Publish to Kafka
     publish_verdict({
-        "rule_id": 1,
-        "rule_name": "Suspicious PowerShell",
-        "status": result["status"],
-        "confidence": result["confidence"],
-        "matched_fields": result["matched_fields"],
-        "event": request.event
-    })
+    "action_id": request.action_id,
+    "verdict": result["status"],
+    "confidence": result["confidence"] / 100,
+    "causal_chain": result.get("matched_fields", []),
+    "mttd_seconds": None,
+    "matched_evidence_ref": request.action_id,
+    "regulatory_control_refs": [],
+    "content_hash": saved_verdict.verdict_hash
+})
 
     print(result)
 

@@ -8,7 +8,7 @@ from app.models.verdict import Verdict
 from app.services.rule_detector import detect_rule_type
 from app.services.rule_parser import parse_rule
 from app.services.validator_service import validate_rule
-
+from app.utils.hash_utils import generate_verdict_hash
 
 
 def upload_sigma_rule(file_path: str, db: Session):
@@ -17,7 +17,6 @@ def upload_sigma_rule(file_path: str, db: Session):
     checks duplicates, and saves it to the database.
     """
 
-    # Detect the rule type
     rule_type = detect_rule_type(file_path)
 
     if rule_type is None:
@@ -26,10 +25,8 @@ def upload_sigma_rule(file_path: str, db: Session):
             detail="Unsupported rule type."
         )
 
-    # Parse the Sigma rule
     rule_data = parse_rule(file_path)
 
-    # Validate required fields
     required_fields = ["title", "description", "detection", "level"]
 
     for field in required_fields:
@@ -39,7 +36,6 @@ def upload_sigma_rule(file_path: str, db: Session):
                 detail=f"Missing required field: {field}"
             )
 
-    # Extract values
     rule_name = rule_data.get("title")
     description = rule_data.get("description")
     severity = rule_data.get("level")
@@ -50,10 +46,9 @@ def upload_sigma_rule(file_path: str, db: Session):
 
     for tag in tags:
         if tag.startswith("attack.t"):
-           mitre_technique = tag.replace("attack.", "").upper()
-           break
+            mitre_technique = tag.replace("attack.", "").upper()
+            break
 
-    # Check duplicate
     existing_rule = (
         db.query(Rule)
         .filter(Rule.rule_name == rule_name)
@@ -66,20 +61,17 @@ def upload_sigma_rule(file_path: str, db: Session):
             detail="Rule with this name already exists."
         )
 
-    # Convert detection to JSON
     query = json.dumps(rule_data.get("detection"))
 
-    # Save to database
-   # Save to database
     new_rule = Rule(
-    rule_name=rule_name,
-    rule_type=rule_type,
-    severity=severity,
-    description=description,
-    query=query,
-    status=status,
-    mitre_technique=mitre_technique
-)
+        rule_name=rule_name,
+        rule_type=rule_type,
+        severity=severity,
+        description=description,
+        query=query,
+        status=status,
+        mitre_technique=mitre_technique
+    )
 
     db.add(new_rule)
     db.commit()
@@ -170,7 +162,6 @@ def validate_uploaded_rule(
     rule_id: int,
     event: dict
 ):
-    # Get rule
     rule = (
         db.query(Rule)
         .filter(Rule.id == rule_id)
@@ -180,41 +171,41 @@ def validate_uploaded_rule(
     if not rule:
         return None
 
-
-    # Run validation
     validation_result = validate_rule(
         rule.query,
         event
     )
 
-
-    # Extract only verdict status
     verdict_status = validation_result["status"]
-
-
-    # Convert event dictionary to JSON
     event_json = json.dumps(event)
 
+    verdict_hash = generate_verdict_hash(
+        rule_id=rule.id,
+        rule_name=rule.rule_name,
+        verdict=verdict_status,
+        event_data=event
+    )
 
-    # Save verdict
     verdict_record = Verdict(
         rule_id=rule.id,
         rule_name=rule.rule_name,
         verdict=verdict_status,
-        event_data=event_json
+        event_data=event_json,
+        verdict_hash=verdict_hash,
+        is_superseded=False,
+        superseded_by=None
     )
-
 
     db.add(verdict_record)
     db.commit()
     db.refresh(verdict_record)
-
 
     return {
         "rule_id": rule.id,
         "rule_name": rule.rule_name,
         "verdict": validation_result
     }
+
 
 def submit_rule_for_approval(
     db: Session,
