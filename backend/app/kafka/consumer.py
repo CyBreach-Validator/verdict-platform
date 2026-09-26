@@ -1,13 +1,14 @@
 import json
 from kafka import KafkaConsumer
+from app.kafka.config import EVIDENCE_TOPIC
 
 from app.database.database import SessionLocal
 from app.services.rule_service import validate_uploaded_rule
 
 consumer = KafkaConsumer(
-    "evidence-events",
+    EVIDENCE_TOPIC,
     bootstrap_servers="localhost:9092",
-    group_id="validator-group",
+    group_id="validator-group-test",
     auto_offset_reset="earliest",
     enable_auto_commit=True,
     value_deserializer=lambda m: json.loads(m.decode("utf-8"))

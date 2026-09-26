@@ -43,38 +43,15 @@ def get_all_verdicts(db: Session):
     return db.query(Verdict).all()
 
 
-def get_verdict_by_id(
-    db: Session,
-    verdict_id: int
-):
-    return (
-        db.query(Verdict)
-        .filter(Verdict.id == verdict_id)
-        .first()
-    )
+def get_verdict_by_id(db: Session, verdict_id: int):
+    return db.query(Verdict).filter(Verdict.id == verdict_id).first()
 
 
-def get_verdicts_by_rule(
-    db: Session,
-    rule_id: int
-):
-    return (
-        db.query(Verdict)
-        .filter(Verdict.rule_id == rule_id)
-        .all()
-    )
+def get_verdicts_by_rule(db: Session, rule_id: int):
+    return db.query(Verdict).filter(Verdict.rule_id == rule_id).all()
 
 
-def correct_verdict(
-    db: Session,
-    verdict_id: int,
-    new_verdict: str
-):
-    """
-    Creates a corrected verdict while preserving
-    the original verdict.
-    """
-
+def correct_verdict(db: Session, verdict_id: int, new_verdict: str):
     old_verdict = (
         db.query(Verdict)
         .filter(Verdict.id == verdict_id)
@@ -84,11 +61,13 @@ def correct_verdict(
     if not old_verdict:
         return None
 
+    event = json.loads(old_verdict.event_data)
+
     new_hash = generate_verdict_hash(
         rule_id=old_verdict.rule_id,
         rule_name=old_verdict.rule_name,
         verdict=new_verdict,
-        event_data=json.loads(old_verdict.event_data)
+        event_data=event
     )
 
     corrected_verdict = Verdict(
@@ -113,15 +92,21 @@ def correct_verdict(
 
     print("Publishing corrected verdict to Kafka...")
 
-    publish_corrected_verdict(
-        {
-            "id": corrected_verdict.id,
-            "rule_id": corrected_verdict.rule_id,
-            "rule_name": corrected_verdict.rule_name,
-            "verdict": corrected_verdict.verdict,
-            "verdict_hash": corrected_verdict.verdict_hash,
-            "supersedes": old_verdict.id
-        }
-    )
+    corrected_event = {
+        "action_id": str(
+            event.get("action_id", corrected_verdict.id)
+        ),
+        "verdict": corrected_verdict.verdict,
+        "confidence": 1.0 if corrected_verdict.verdict == "Detected" else 0.0,
+        "causal_chain": [],
+        "mttd_seconds": None,
+        "matched_evidence_ref": str(
+            event.get("action_id", corrected_verdict.id)
+        ),
+        "regulatory_control_refs": [],
+        "content_hash": corrected_verdict.verdict_hash
+    }
+
+    publish_corrected_verdict(corrected_event)
 
     return corrected_verdict
