@@ -118,17 +118,19 @@ def revalidate_verdict(db: Session, verdict_id: int):
 
         publish_gap_closed_event(gap_closed_event)
 
-        print("✅ Gap-closed event published")
+        print("Gap-closed event published")
 
     create_audit_log(
         db=db,
         action="REVALIDATION",
-        entity_type="verdict",
-        entity_id=new_verdict.id,
+        verdict_id=new_verdict.id,
+        rule_id=new_verdict.rule_id,
+        rule_name=new_verdict.rule_name,
+        old_verdict=old_verdict.verdict,
+        new_verdict=new_verdict.verdict,
+        related_verdict_id=old_verdict.id,
+        verdict_hash=new_verdict.verdict_hash,
         details={
-            "previous_verdict_id": old_verdict.id,
-            "old_verdict": old_verdict.verdict,
-            "new_verdict": new_verdict.verdict,
             "gap_closed": gap_closed
         }
     )
