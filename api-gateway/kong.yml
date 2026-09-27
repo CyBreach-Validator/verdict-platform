@@ -2,7 +2,7 @@ _format_version: "3.0"
 
 services:
   - name: backend-service
-    url: http://host.docker.internal:8033
+    url: http://host.docker.internal:8004
 
     plugins:
       - name: rate-limiting
@@ -25,44 +25,7 @@ services:
           - /health
         strip_path: false
 
-      - name: auth-route
+      - name: api-v2-route
         paths:
-          - /auth
+          - /api/v2
         strip_path: false
-
-      - name: users-route
-        paths:
-          - /users
-        strip_path: false
-
-      - name: rules-route
-        paths:
-          - /rules
-        strip_path: false
-
-      - name: verdicts-route
-        paths:
-          - /verdicts
-        strip_path: false
-
-      - name: audit-logs-route
-        paths:
-          - /audit-logs
-        strip_path: false
-
-      - name: dashboard-route
-        paths:
-          - /dashboard
-        strip_path: false
-
-      - name: connectors-route
-        paths:
-          - /connectors
-        strip_path: false
-      
-      - name: validator-route
-        paths:
-          - /validator
-        strip_path: false
-        methods:
-          - POST

@@ -46,14 +46,14 @@ app.add_middleware(
 
 Base.metadata.create_all(bind=engine)
 
-app.include_router(user_router)
-app.include_router(rule_router)
-app.include_router(verdict_router)
-app.include_router(dashboard_router)
-app.include_router(connector_router)
-app.include_router(validator_router)
-app.include_router(audit_logs_router)
-app.include_router(auth.router)
+app.include_router(user_router, prefix="/api/v2")
+app.include_router(rule_router, prefix="/api/v2")
+app.include_router(verdict_router, prefix="/api/v2")
+app.include_router(dashboard_router, prefix="/api/v2")
+app.include_router(connector_router, prefix="/api/v2")
+app.include_router(validator_router, prefix="/api/v2")
+app.include_router(audit_logs_router, prefix="/api/v2")
+app.include_router(auth.router, prefix="/api/v2")
 
 
 @app.websocket("/ws/verdicts")
