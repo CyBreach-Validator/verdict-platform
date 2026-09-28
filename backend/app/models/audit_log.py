@@ -34,8 +34,9 @@ class AuditLog(Base):
         nullable=True
     )
 
+    # B6: string, matching `verdict_events.rule_id` and `rules.rule_id`.
     rule_id = Column(
-        Integer,
+        String(64),
         nullable=False
     )
 
@@ -54,7 +55,8 @@ class AuditLog(Base):
         nullable=True
     )
 
-    verdict_hash = Column(
+    # M12: one canonical hash field name, matching the wire contract.
+    content_hash = Column(
         String(64),
         nullable=True
     )
