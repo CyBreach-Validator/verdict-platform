@@ -2,21 +2,21 @@ import json
 
 from sqlalchemy.orm import Session
 
+from app.contracts.verdict_event import compute_content_hash
 from app.models.audit_log import AuditLog
 from app.models.verdict import Verdict
-from app.utils.hash_utils import generate_verdict_hash
 
 
 def create_audit_log(
     db: Session,
     action: str,
     verdict_id: int,
-    rule_id: int,
+    rule_id: str,
     rule_name: str,
     old_verdict: str = None,
     new_verdict: str = None,
     related_verdict_id: int = None,
-    verdict_hash: str = None,
+    content_hash: str = None,
     details: dict = None,
 ):
     audit_log = AuditLog(
@@ -27,7 +27,7 @@ def create_audit_log(
         rule_name=rule_name,
         old_verdict=old_verdict,
         new_verdict=new_verdict,
-        verdict_hash=verdict_hash,
+        content_hash=content_hash,
         details=json.dumps(details) if details else None,
     )
 
@@ -61,6 +61,15 @@ def verify_verdict_immutability(
     db: Session,
     verdict_id: int
 ):
+    """Recompute the stored verdict's `content_hash` from its own fields.
+
+    N-D13: the old implementation hashed `{rule_id, rule_name, verdict,
+    event_data}` -- a tuple that does not even appear in the published v2.0
+    event, so it verified a digest no consumer could reproduce. The digest now
+    covers the seven contract fields, which is exactly what a consumer holding
+    the event re-derives.
+    """
+
     verdict = (
         db.query(Verdict)
         .filter(Verdict.id == verdict_id)
@@ -70,30 +79,24 @@ def verify_verdict_immutability(
     if not verdict:
         return None
 
-    try:
-        event_data = json.loads(verdict.event_data)
-    except (TypeError, json.JSONDecodeError):
-        return {
-            "verdict_id": verdict.id,
-            "immutable": False,
-            "stored_hash": verdict.verdict_hash,
-            "calculated_hash": None,
-            "reason": "Invalid event data stored for verdict.",
-        }
+    recalculated = {
+        "action_id": verdict.action_id,
+        "verdict": verdict.verdict,
+        "confidence": verdict.confidence,
+        "causal_chain": verdict.causal_chain or [],
+        "mttd_seconds": verdict.mttd_seconds,
+        "matched_evidence_ref": verdict.matched_evidence_ref,
+        "regulatory_control_refs": verdict.regulatory_control_refs or [],
+    }
 
-    calculated_hash = generate_verdict_hash(
-        rule_id=verdict.rule_id,
-        rule_name=verdict.rule_name,
-        verdict=verdict.verdict,
-        event_data=event_data,
-    )
+    calculated_hash = compute_content_hash(recalculated)
 
-    immutable = calculated_hash == verdict.verdict_hash
+    immutable = calculated_hash == verdict.content_hash
 
     return {
         "verdict_id": verdict.id,
         "immutable": immutable,
-        "stored_hash": verdict.verdict_hash,
+        "stored_hash": verdict.content_hash,
         "calculated_hash": calculated_hash,
         "reason": (
             "Hash verification successful."

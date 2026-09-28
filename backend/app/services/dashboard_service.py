@@ -137,7 +137,7 @@ def get_revalidation_dashboard(db: Session):
                 "delta": delta,
                 "improved": improved,
                 "gap_closed": gap_closed,
-                "verdict_hash": record.verdict_hash,
+                "content_hash": record.content_hash,
                 "created_at": record.created_at,
             }
         )

@@ -38,7 +38,7 @@ def generate_csv(verdicts):
             verdict.rule_id,
             verdict.rule_name,
             verdict.verdict,
-            verdict.verdict_hash,
+            verdict.content_hash,
             verdict.created_at,
         ])
 
@@ -85,7 +85,7 @@ def generate_pdf(verdicts):
             Paragraph(str(verdict.id), body_style),
             Paragraph(str(verdict.rule_name), body_style),
             Paragraph(str(verdict.verdict), body_style),
-            Paragraph(str(verdict.verdict_hash), body_style),
+            Paragraph(str(verdict.content_hash), body_style),
             Paragraph(str(verdict.created_at), body_style),
         ])
 

@@ -11,6 +11,7 @@ from app.services.verdict_service import (
     get_all_verdicts,
     get_verdict_by_id,
     get_verdicts_by_rule as get_verdicts_by_rule_service,
+    get_verdicts_by_action as get_verdicts_by_action_service,
 )
 from app.schemas.verdict_correction import (
     VerdictCorrectionRequest,
@@ -59,13 +60,6 @@ def get_verdict(
 
     return verdict
 
-    if not verdict:
-        raise HTTPException(
-            status_code=404,
-            detail="Verdict not found."
-        )
-
-    return verdict
 
 @router.get("/verdicts/export/csv")
 @limiter.limit("100/minute")
@@ -103,7 +97,10 @@ def export_verdicts_pdf(
 
 @router.get("/verdicts/rule/{rule_id}", response_model=list[VerdictResponse])
 def get_verdicts_by_rule(
-    rule_id: int,
+    # B6: the canonical rule identifier is a 64-character content hash, so
+    # `rule_id: int` made this route unmatchable -- FastAPI refused to parse the
+    # path parameter before the query ever ran.
+    rule_id: str,
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user)
 ):
@@ -113,6 +110,29 @@ def get_verdicts_by_rule(
         raise HTTPException(
             status_code=404,
             detail="No verdicts found for this rule."
+        )
+
+    return verdicts
+
+
+@router.get(
+    "/verdicts/action/{action_id}", response_model=list[VerdictResponse]
+)
+def get_verdicts_by_action(
+    # Plan Section 9: `action_id` is the cross-pod join key for an evidence
+    # event. There was no route to read a verdict set by action at all, so a
+    # consumer holding an evidence id had no way to fetch the verdicts it
+    # produced.
+    action_id: str,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    verdicts = get_verdicts_by_action_service(db, action_id)
+
+    if not verdicts:
+        raise HTTPException(
+            status_code=404,
+            detail="No verdicts found for this action."
         )
 
     return verdicts
@@ -128,10 +148,12 @@ def correct_verdict_endpoint(
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user)
 ):
-    verdict = correct_verdict(
+    verdict, _payload = correct_verdict(
         db=db,
         verdict_id=verdict_id,
-        new_verdict=request.verdict
+        new_verdict=request.verdict,
+        confidence=request.confidence,
+        causal_chain=request.causal_chain,
     )
 
     if not verdict:

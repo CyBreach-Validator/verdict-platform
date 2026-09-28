@@ -21,7 +21,7 @@ def get_causal_chain(
 
     rule = (
         db.query(Rule)
-        .filter(Rule.id == verdict.rule_id)
+        .filter(Rule.rule_id == verdict.rule_id)
         .first()
     )
 
@@ -31,6 +31,7 @@ def get_causal_chain(
     return {
         "rule": {
             "id": rule.id,
+            "rule_id": rule.rule_id,
             "name": rule.rule_name,
             "technique": rule.mitre_technique,
         },
@@ -47,7 +48,15 @@ def get_causal_chain(
         },
         "verdict": {
             "id": verdict.id,
-            "hash": verdict.verdict_hash,
+            # B6/N-D10: the column is `content_hash` in the v2.0 contract. This
+            # read `verdict_hash`, which the schema no longer has, and it also
+            # looked the rule up with `Rule.id == verdict.rule_id` -- an integer
+            # column compared against a 64-character content hash, so the join
+            # could never match and the whole endpoint 404'd on a valid verdict.
+            "content_hash": verdict.content_hash,
+            "causal_chain": verdict.causal_chain or [],
+            "mttd_seconds": verdict.mttd_seconds,
+            "matched_evidence_ref": verdict.matched_evidence_ref,
             "superseded": verdict.is_superseded,
         },
     }
