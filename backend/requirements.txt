@@ -23,3 +23,20 @@ alembic==1.14.0
 kafka-python==3.0.11
 python-jose==3.5.0
 slowapi==0.1.10
+
+# M6: these two are imported on the application's start-up path but were never
+# listed here, so the image built from this file could not run:
+#   - `jsonschema` backs `app/contracts/verdict_event.py`, i.e. the v2.0 schema
+#     validation every emit path depends on;
+#   - `reportlab` backs `app/services/export_service.py`, which
+#     `app/api/verdicts.py` imports at module load, so its absence is an
+#     ImportError on startup rather than a failure limited to the export route.
+# Transitive dependencies are pinned to match the reproducible style above.
+attrs==26.1.0
+chardet==7.6.0
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
+pillow==12.3.0
+referencing==0.37.0
+reportlab==4.2.5
+rpds-py==2026.6.3
