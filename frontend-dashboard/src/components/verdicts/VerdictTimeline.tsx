@@ -171,7 +171,7 @@ function TimelineNode({
           </div>
 
           <div style={{ gridColumn: "1 / -1" }}>
-            <strong>Verdict Hash</strong>
+            <strong>Content Hash</strong>
             <div
               style={{
                 marginTop: 4,
@@ -217,7 +217,7 @@ export default function VerdictTimeline({
         title="Original Verdict"
         verdict={verdict.verdict}
         id={verdict.id}
-        hash={verdict.verdict_hash}
+        hash={verdict.content_hash}
         createdAt={verdict.created_at}
         description={
           verdict.is_superseded
@@ -253,9 +253,9 @@ export default function VerdictTimeline({
               <div>
                 <strong>Score</strong>
                 <div>
-                  {revalidationResult.comparison.old_score}
+                  {revalidationResult.comparison.old_confidence}
                   {" → "}
-                  {revalidationResult.comparison.new_score}
+                  {revalidationResult.comparison.new_confidence}
                 </div>
               </div>
 
@@ -293,7 +293,7 @@ export default function VerdictTimeline({
             title="New Verdict"
             verdict={revalidationResult.new_verdict.verdict}
             id={revalidationResult.new_verdict.id}
-            hash={revalidationResult.new_verdict.verdict_hash}
+            hash={revalidationResult.new_verdict.content_hash}
             createdAt={revalidationResult.new_verdict.created_at}
             description="Verdict generated after re-validation."
           />

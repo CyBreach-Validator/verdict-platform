@@ -226,11 +226,11 @@ export default function VerdictDetailsPage() {
 
           <div className="detail-card detail-card-wide">
             <span className="detail-label">
-              Verdict Hash
+              Content Hash
             </span>
 
             <code className="hash-value">
-              {verdict.verdict_hash}
+              {verdict.content_hash}
             </code>
           </div>
         </div>
@@ -282,8 +282,8 @@ export default function VerdictDetailsPage() {
                 </strong>
 
                 <small>
-                  Score:{" "}
-                  {revalidationResult.comparison.old_score}
+                  Confidence:{" "}
+                  {revalidationResult.comparison.old_confidence}
                 </small>
               </div>
 
@@ -303,15 +303,15 @@ export default function VerdictDetailsPage() {
                 </strong>
 
                 <small>
-                  Score:{" "}
-                  {revalidationResult.comparison.new_score}
+                  Confidence:{" "}
+                  {revalidationResult.comparison.new_confidence}
                 </small>
               </div>
             </div>
 
             <div className="comparison-summary">
               <div>
-                  <span>Score Delta</span>
+                  <span>Confidence Delta</span>
                   <strong>
                     {revalidationResult.comparison.delta > 0 ? "+" : ""}
                     {revalidationResult.comparison.delta}
@@ -353,9 +353,9 @@ export default function VerdictDetailsPage() {
               </div>
 
               <div>
-                <span>New Verdict Hash</span>
+                <span>New Content Hash</span>
                 <code>
-                  {revalidationResult.new_verdict.verdict_hash}
+                  {revalidationResult.new_verdict.content_hash}
                 </code>
                 
               </div>

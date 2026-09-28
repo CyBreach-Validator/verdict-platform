@@ -4,14 +4,16 @@ export interface RevalidationHistoryItem {
   id: number;
   verdict_id: number;
   related_verdict_id: number | null;
-  rule_id: number;
+  // B6: canonical content-hash rule identifier (string), matching the backend.
+  rule_id: string;
   rule_name: string;
   old_verdict: string;
   new_verdict: string;
   delta: number;
   improved: boolean;
   gap_closed: boolean;
-  verdict_hash: string;
+  // M12: the contract field is `content_hash`.
+  content_hash: string;
   created_at: string;
 }
 
