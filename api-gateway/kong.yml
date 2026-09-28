@@ -2,7 +2,13 @@ _format_version: "3.0"
 
 services:
   - name: backend-service
-    url: http://host.docker.internal:8004
+    # N-D1: this was `host.docker.internal:8004`, which the port registry
+    # assigns to **Beta's** `vp_app` -- so the Delta gateway proxied to another
+    # pod's service and every request through it returned that pod's responses.
+    # Delta's backend is on 8000 (`port-registery.md`), which is also what the
+    # dashboard's `VITE_API_BASE_URL` default targets, so the direct path and the
+    # gateway path now agree on one port.
+    url: http://host.docker.internal:8000
 
     plugins:
       - name: rate-limiting
