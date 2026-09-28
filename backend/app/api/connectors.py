@@ -3,15 +3,20 @@ from sqlalchemy.orm import Session
 
 from app.database.database import get_db
 from app.schemas.connector import ConnectorResponse
+from app.security.security import get_current_user
 from app.services.connector_service import (
     get_all_connectors,
     get_connector_by_id,
     seed_connectors,
 )
 
+# B11: the connector inventory was readable anonymously. It exposes which SIEMs
+# are attached and their health, which is reconnaissance for an attacker
+# targeting Delta's ingestion path, and `seed_connectors` is a write.
 router = APIRouter(
     prefix="/connectors",
     tags=["SIEM Connectors"],
+    dependencies=[Depends(get_current_user)],
 )
 
 

@@ -23,7 +23,14 @@ from app.services.rule_service import (
     reject_rule as reject_rule_service,
 )
 
-router = APIRouter()
+# B11: 9 of the 10 routes here carried a per-handler
+# `current_user: str = Depends(get_current_user)`, and `GET /rules/{rule_id}/compare`
+# was the one that was missed -- an anonymous read of a rule's diff. The guard
+# belongs on the router instead: a per-route dependency is exactly the kind of
+# thing the next person forgets to copy onto the route they add. The existing
+# per-handler declarations are left in place so each route still resolves an
+# explicit `current_user` where it uses it.
+router = APIRouter(dependencies=[Depends(get_current_user)])
 
 
 @router.post("/rules", response_model=RuleResponse)

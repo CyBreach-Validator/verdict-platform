@@ -6,12 +6,15 @@ from app.database.database import get_db
 from app.models.rule import Rule
 from app.models.verdict import Verdict
 from app.schemas.dashboard import DashboardStats
+from app.security.security import get_current_user
 from app.services.dashboard_service import (
     get_detection_coverage,
     get_revalidation_dashboard,
 )
 
-router = APIRouter()
+# B11: detection statistics, coverage ratios and the revalidation view were
+# all served anonymously. That is a direct read of the detection posture.
+router = APIRouter(dependencies=[Depends(get_current_user)])
 
 
 @router.get("/dashboard/stats", response_model=DashboardStats)

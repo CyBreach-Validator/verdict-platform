@@ -1,13 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-print("✅ users.py loaded")
-
 from app.database.database import get_db
 from app.models.user import User
 from app.schemas.user import UserCreate
+from app.security.security import get_current_user
 
-router = APIRouter()
+# B11: this router had no authentication at all, so `POST /users` let an
+# anonymous caller create accounts and `GET /users` enumerated every user in
+# the platform. The guard is declared on the router rather than repeated on
+# each handler: every route here needs it, and a per-route `Depends` is exactly
+# what was forgotten the last time this router was extended.
+#
+# Requiring auth on `POST /users` does not lock out the first user: tokens come
+# from `/auth/login`, which authenticates against ADMIN_USERNAME/ADMIN_PASSWORD
+# from the environment and is independent of this table.
+router = APIRouter(dependencies=[Depends(get_current_user)])
 
 
 @router.post("/users")
