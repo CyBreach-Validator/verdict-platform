@@ -1,58 +1,38 @@
+alembic==1.18.5
 annotated-doc==0.0.4
 annotated-types==0.7.0
 anyio==4.14.1
+attrs==26.1.0
+chardet==7.6.0
 click==8.4.2
 colorama==0.4.6
 fastapi==0.139.0
 greenlet==3.5.3
 h11==0.16.0
 idna==3.18
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
+kafka-python==3.0.8
+pillow==12.3.0
 psycopg2-binary==2.9.12
 pydantic==2.13.4
 pydantic_core==2.46.4
 python-dotenv==1.2.2
+python-jose==3.5.0
 python-multipart==0.0.32
 PyYAML==6.0.3
+referencing==0.37.0
+reportlab==5.0.1
+rpds-py==2026.6.3
+slowapi==0.1.10
 SQLAlchemy==2.0.51
 starlette==1.3.1
 typing-inspection==0.4.2
 typing_extensions==4.16.0
 uvicorn==0.49.0
 
-alembic==1.14.0
-kafka-python==3.0.11
-python-jose==3.5.0
-slowapi==0.1.10
-
-# M6: these two are imported on the application's start-up path but were never
-# listed here, so the image built from this file could not run:
-#   - `jsonschema` backs `app/contracts/verdict_event.py`, i.e. the v2.0 schema
-#     validation every emit path depends on;
-#   - `reportlab` backs `app/services/export_service.py`, which
-#     `app/api/verdicts.py` imports at module load, so its absence is an
-#     ImportError on startup rather than a failure limited to the export route.
-# Transitive dependencies are pinned to match the reproducible style above.
-attrs==26.1.0
-chardet==7.6.0
-jsonschema==4.26.0
-jsonschema-specifications==2025.9.1
-pillow==12.3.0
-referencing==0.37.0
-reportlab==4.2.5
-rpds-py==2026.6.3
-
 # Test dependencies, pinned separately from the runtime set above.
 #
-# The CI workflow installs only requirements.txt and then runs
-# `python -m pytest tests/ -q`. While these were absent, every run failed with
-# "No module named pytest" -- the suites here are 52 tests that CI was meant to
-# gate, so the gate never once executed. Kept out of the runtime block above so
-# a production image does not carry a test framework. This is still the single
-# file CI installs, so one `pip install -r requirements.txt` yields a working
-# test run; a separate dev-requirements file would have meant editing every
-# install site to remember a second path.
+# CI installs requirements.txt and then runs:
+#   python -m pytest tests/ -q
 pytest==9.1.1
-# pytest does not bundle an assertion-rewriting or async plugin, and the
-# suites use neither. httpx is not currently imported by any test (no test
-# exercises TestClient), so it is intentionally not pinned -- adding it here
-# would imply coverage that does not exist.
