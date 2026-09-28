@@ -1,0 +1,40 @@
+# N-D3: there was no .dockerignore, so `COPY . ./` copied the entire build
+# context -- including .git, every __pycache__ directory, and the
+# frontend-dashboard/node_modules tree. That bloated the image, leaked
+# repository history into it, and could overwrite the image's own installed
+# packages with host copies.
+
+.git
+.gitignore
+.github
+**/__pycache__/
+**/*.py[cod]
+**/*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Tests are not needed at runtime; the image serves the API.
+tests/
+test_*.py
+**/test_*.py
+
+# Local environment and secrets. `.env` must never be baked into an image --
+# the container takes configuration from the environment at run time.
+.env
+.env.*
+*.log
+
+# Editor / OS noise
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Not part of the backend image.
+uploads/*
+!uploads/.gitkeep

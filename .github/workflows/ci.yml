@@ -1,0 +1,123 @@
+# N-D14: Delta had no CI workflow, so none of the v2.0 contract work was
+# gated. This workflow is the gate: it runs the same checks the run plan
+# documents, on every push and pull request.
+#
+# Everything here is runnable without Docker, PostgreSQL, Kafka or Redis. The
+# three suite failures that need live Redis/Alpha are covered in Pod Beta; the
+# schema is validated structurally (offline SQL generation + model/migration
+# parity) rather than by applying migrations to a live database.
+
+name: delta-ci
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: backend
+
+concurrency:
+  group: delta-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (contract, schema, semantics)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Byte-compile every module
+        # Catches the class of syntax error that previously blocked importing
+        # the Validation Engine (N-B1) before any test could run.
+        run: python -m compileall -q app alembic tests
+
+      - name: Unit tests
+        run: python -m pytest tests/ -q
+
+      - name: The app must import with only DATABASE_URL set
+        # Proves there are no hardcoded secrets or default admin credentials
+        # left on the import path (M7, m7).
+        env:
+          DATABASE_URL: postgresql+psycopg2://ci:ci@localhost:5432/ci
+        run: python -c "from app.main import app; assert app.openapi()['info']['title']"
+
+      - name: Alembic must generate SQL offline from an empty database
+        # N-D2: the previous chain could not produce a runnable script. Offline
+        # generation needs no database but does walk the whole revision graph.
+        env:
+          DATABASE_URL: postgresql+psycopg2://ci:ci@localhost:5432/ci
+        run: python -m alembic upgrade head --sql > /dev/null
+
+      - name: Exactly one migration head
+        env:
+          DATABASE_URL: postgresql+psycopg2://ci:ci@localhost:5432/ci
+        run: |
+          heads=$(python -m alembic heads | grep -c '(head)')
+          test "$heads" -eq 1 || { echo "expected 1 alembic head, found $heads"; exit 1; }
+
+      - name: The downgrade path must be reversible
+        # An index that is created but never dropped turns `downgrade` into a
+        # one-way trip the next `upgrade` cannot repair. `head:base` is the
+        # explicit range offline mode requires; a bare `downgrade base` errors.
+        env:
+          DATABASE_URL: postgresql+psycopg2://ci:ci@localhost:5432/ci
+        run: |
+          python -m alembic downgrade head:base --sql > /dev/null
+          # Every index the upgrade creates must appear in the downgrade SQL.
+          for idx in $(
+            python -m alembic upgrade head --sql \
+              | grep -oP 'CREATE (?:UNIQUE )?INDEX \K\w+' | sort -u
+          ); do
+            python -m alembic downgrade head:base --sql \
+              | grep -q "DROP INDEX $idx" \
+              || { echo "downgrade never drops index: $idx"; exit 1; }
+          done
+
+  frontend:
+    name: Frontend dashboard (typecheck + build)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend-dashboard/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend-dashboard
+        run: npm ci
+
+      - name: Typecheck
+        # The dashboard's types are hand-maintained and already drifted once:
+        # the backend renamed `verdict_hash` to `content_hash` while the UI
+        # still read the old field, which would have rendered `undefined`.
+        #
+        # `tsc -b`, not a bare `tsc --noEmit`: tsconfig.json is
+        # `{"files": [], "references": [...]}` , so a bare invocation would
+        # compile zero files and pass vacuously. `-b` builds the referenced
+        # projects and actually checks the code.
+        working-directory: frontend-dashboard
+        run: npx tsc -b --force
+
+      - name: Build
+        working-directory: frontend-dashboard
+        run: npm run build
