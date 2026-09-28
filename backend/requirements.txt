@@ -40,3 +40,19 @@ pillow==12.3.0
 referencing==0.37.0
 reportlab==4.2.5
 rpds-py==2026.6.3
+
+# Test dependencies, pinned separately from the runtime set above.
+#
+# The CI workflow installs only requirements.txt and then runs
+# `python -m pytest tests/ -q`. While these were absent, every run failed with
+# "No module named pytest" -- the suites here are 52 tests that CI was meant to
+# gate, so the gate never once executed. Kept out of the runtime block above so
+# a production image does not carry a test framework. This is still the single
+# file CI installs, so one `pip install -r requirements.txt` yields a working
+# test run; a separate dev-requirements file would have meant editing every
+# install site to remember a second path.
+pytest==9.1.1
+# pytest does not bundle an assertion-rewriting or async plugin, and the
+# suites use neither. httpx is not currently imported by any test (no test
+# exercises TestClient), so it is intentionally not pinned -- adding it here
+# would imply coverage that does not exist.

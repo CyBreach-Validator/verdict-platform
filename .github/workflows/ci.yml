@@ -42,6 +42,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Verify the test runner is importable
+        # Guards the failure this workflow actually hit: the install step
+        # succeeded, the byte-compile step succeeded, and only the pytest step
+        # failed with "No module named pytest" -- 6 steps of green before the
+        # first real signal. Asserting the runner exists here turns a confusing
+        # mid-run failure into an immediate one at the step that caused it.
+        run: |
+          python -c "import pytest; print('pytest', pytest.__version__)"
+
       - name: Byte-compile every module
         # Catches the class of syntax error that previously blocked importing
         # the Validation Engine (N-B1) before any test could run.
