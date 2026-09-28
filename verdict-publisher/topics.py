@@ -1,1 +1,0 @@
-VERDICT_TOPIC = "verdict-events"
