@@ -20,11 +20,19 @@ def get_detection_coverage(db: Session):
     )
 
 
+    # N-D18/B6: `Verdict.rule_id` is a `String(64)` FK onto `rules.rule_id`
+    # (`app/models/verdict.py:43`), which is itself the canonical content hash
+    # (`app/models/rule.py:14`). Joining it against `Rule.id` compared a
+    # 64-character hash to an integer surrogate, so the query never matched a
+    # row and `/dashboard/coverage` always reported an empty rule set. `Rule.id`
+    # remains the local surrogate key for Delta's own `/rules` routes; the
+    # cross-pod join is on `rule_id`, the same fix as
+    # `app/services/causal_chain_service.py:24`.
     records = (
         db.query(Verdict, Rule)
         .join(
             Rule,
-            Verdict.rule_id == Rule.id
+            Verdict.rule_id == Rule.rule_id
         )
         .all()
     )
