@@ -51,11 +51,6 @@ def _require_database_url() -> str:
 
     return url
 
-if not DATABASE_URL:
-    raise RuntimeError(
-        "DATABASE_URL is not set. "
-        "Copy backend\\.env.example to backend\\.env and configure the database connection."
-    )
 
 class Base(DeclarativeBase):
     pass
