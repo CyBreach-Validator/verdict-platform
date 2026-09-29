@@ -33,6 +33,50 @@ export default function RuleComparison({ ruleId }: Props) {
     return <p>No comparison data found.</p>;
   }
 
+  // N-D19: the backend previously returned a hardcoded "Suspicious
+  // PowerShell" block for `proposed`, so this table always rendered a diff
+  // between the stored rule and an invented one. `proposed` is now null until
+  // a caller actually submits a revision, and saying so is more useful than
+  // highlighting four meaningless differences.
+  if (!comparison.proposed) {
+    return (
+      <div className="bg-white rounded-lg shadow p-6 mt-6">
+        <h2 className="text-xl font-bold mb-4">Rule Comparison</h2>
+
+        <table className="w-full border-collapse border">
+          <thead>
+            <tr className="bg-gray-200">
+              <th className="border px-4 py-2">Field</th>
+
+              <th className="border px-4 py-2">Current Rule</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {(
+              [
+                ["Title", comparison.current.title],
+                ["Query", comparison.current.query],
+                ["Severity", comparison.current.severity],
+                ["Status", comparison.current.status],
+              ] as const
+            ).map(([label, value]) => (
+              <tr key={label}>
+                <td className="border px-4 py-2 font-medium">{label}</td>
+
+                <td className="border px-4 py-2">{value}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <p className="mt-4 text-sm text-gray-600">
+          No proposed change has been submitted for this rule.
+        </p>
+      </div>
+    );
+  }
+
   const renderRow = (
     label: string,
     current: string,

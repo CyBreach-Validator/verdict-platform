@@ -1,12 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from app.security.security import get_current_user
 
 import os
 import shutil
+from typing import Optional
 
 from app.database.database import get_db
-from app.schemas.rule import RuleCreate, RuleUpdate, RuleResponse
+from app.schemas.rule import (
+    RuleComparisonProposed,
+    RuleCreate,
+    RuleResponse,
+    RuleUpdate,
+)
 from app.schemas.validator import ValidationRequest
 from app.models.rule import Rule
 
@@ -254,27 +260,39 @@ def validate_rule_endpoint(
     return result
     
 
-@router.get("/rules/{rule_id}/compare")
-def compare_rule(rule_id: int, db: Session = Depends(get_db)):
+@router.post("/rules/{rule_id}/compare")
+def compare_rule(
+    rule_id: int,
+    proposed_in: Optional[RuleComparisonProposed] = Body(default=None),
+    db: Session = Depends(get_db)
+):
     current = db.query(Rule).filter(Rule.id == rule_id).first()
 
     if not current:
         raise HTTPException(status_code=404, detail="Rule not found")
 
-    # Temporary demo data
-    proposed = {
-        "title": "Suspicious PowerShell",
-        "query": 'Image="powershell.exe" AND Parent="cmd.exe"',
-        "severity": "High",
-        "status": "Pending"
-    }
-
-    return {
-    "current": {
+    current_block = {
         "title": current.rule_name,
         "query": current.query,
         "severity": current.severity,
         "status": current.status,
-    },
-    "proposed": proposed,
-}
+    }
+
+    # N-D19: this block used to be a hardcoded
+    # `{"title": "Suspicious PowerShell", ...}` literal marked
+    # `# Temporary demo data`. Every caller got a diff against a rule that does
+    # not exist, so the dashboard's changed/unchanged highlighting carried no
+    # information. A proposal is now whatever the caller submits, and `None`
+    # means "no proposed change" rather than "here is an invented one".
+    if proposed_in is None:
+        proposed = None
+    else:
+        proposed = {
+            field: getattr(proposed_in, field) or current_block[field]
+            for field in ("title", "query", "severity", "status")
+        }
+
+    return {
+        "current": current_block,
+        "proposed": proposed,
+    }

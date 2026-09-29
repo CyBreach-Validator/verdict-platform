@@ -21,19 +21,16 @@ export interface RuleInput {
   mitre_technique?: string;
 }
 
+export interface RuleComparisonBlock {
+  title: string;
+  query: string;
+  severity: string;
+  status: string;
+}
+
 export interface RuleComparison {
-  current: {
-    title: string;
-    query: string;
-    severity: string;
-    status: string;
-  };
-  proposed: {
-    title: string;
-    query: string;
-    severity: string;
-    status: string;
-  };
+  current: RuleComparisonBlock;
+  proposed: RuleComparisonBlock | null;
 }
 
 // Get/search rules
@@ -119,12 +116,19 @@ export const rejectRule = async (
   return response.data;
 };
 
-// Compare current and proposed rule
+// Compare current rule against a proposed revision.
+//
+// N-D19: this used to be a GET and the backend answered with a hardcoded
+// "Suspicious PowerShell" block, so the diff shown here was always between a
+// real rule and a fabricated one. It is now a POST carrying the proposal, and
+// `proposed` is null when no proposal has been submitted.
 export const getRuleComparison = async (
-  ruleId: number
+  ruleId: number,
+  proposed?: Partial<RuleComparisonBlock>
 ): Promise<RuleComparison> => {
-  const response = await api.get(
-    `/rules/${ruleId}/compare`
+  const response = await api.post(
+    `/rules/${ruleId}/compare`,
+    proposed ?? {}
   );
 
   return response.data;
