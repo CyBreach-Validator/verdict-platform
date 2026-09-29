@@ -8,8 +8,8 @@ Plan Section 9 "Verdict Event (publish, v2.0)" requires exactly these fields:
 
 Every Delta emit path (Kafka, WebSocket, REST response, DB row) previously
 hand-built its own dict, so the three paths disagreed with each other and
-with the frozen JSON Schema in `contracts/verdict-event/verdict.schema.json`.
-This module owns:
+with the frozen JSON Schema in the workspace contract registry
+(`contracts/verdict-event/verdict.schema.json`, M5). This module owns:
 
   1. The canonical verdict token spelling (`NoData`, never `"No Data"`).
   2. `build_verdict_event(...)` -- the one serializer. It takes the real
@@ -28,10 +28,52 @@ from typing import Any, Dict, List, Optional
 
 import jsonschema
 
-# Frozen contract lives at <repo>/contracts/verdict-event/verdict.schema.json
-# This module lives at <repo>/backend/app/contracts/verdict_event.py
-CONTRACT_DIR = Path(__file__).resolve().parents[3] / "contracts" / "verdict-event"
-VERDICT_SCHEMA_PATH = CONTRACT_DIR / "verdict.schema.json"
+# The frozen contract is owned by the workspace contract registry (M5), not by
+# this pod. Set M2_CONTRACTS_PATH to relocate it; otherwise it is found by
+# walking up to the workspace root.
+#
+# This path previously used `parents[3]`, which resolves to the *pod* root
+# (`cybreach_pod_delta/contracts/...`) rather than the workspace root, so the
+# file it named did not exist and `validate_verdict_event` raised
+# FileNotFoundError the first time anything tried to validate a payload. The
+# registry is now searched for explicitly, and the failure mode is a clear
+# error naming the path that was tried rather than a bare FileNotFoundError
+# from inside a cached loader.
+def _resolve_schema_path() -> Path:
+    import os
+
+    override = os.getenv("M2_CONTRACTS_PATH")
+    if override:
+        candidate = Path(override) / "verdict-event" / "verdict.schema.json"
+        if candidate.exists():
+            return candidate
+
+    # <workspace>/contracts/verdict-event/verdict.schema.json
+    workspace_candidate = (
+        Path(__file__).resolve().parents[4] / "contracts" / "verdict-event"
+    )
+    if (workspace_candidate / "verdict.schema.json").exists():
+        return workspace_candidate / "verdict.schema.json"
+
+    # A pod-local copy, if one is ever vendored deliberately.
+    pod_candidate = (
+        Path(__file__).resolve().parents[3] / "contracts" / "verdict-event"
+        / "verdict.schema.json"
+    )
+    if pod_candidate.exists():
+        return pod_candidate
+
+    raise FileNotFoundError(
+        "frozen verdict schema not found. Looked for it under "
+        f"M2_CONTRACTS_PATH={override!r}, the workspace registry at "
+        f"{workspace_candidate / 'verdict.schema.json'}, and a pod-local copy at "
+        f"{pod_candidate}. The schema is owned by the workspace contract "
+        "registry; run from a checkout that contains it."
+    )
+
+
+CONTRACT_DIR = _resolve_schema_path().parent
+VERDICT_SCHEMA_PATH = _resolve_schema_path()
 
 # The one canonical verdict spelling (M2). Delta used to emit "No Data" on
 # the re-validation and gap-closed paths; Alpha/Beta/Gamma use `NoData`.
