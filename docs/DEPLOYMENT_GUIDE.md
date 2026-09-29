@@ -68,7 +68,7 @@ docs
 
 frontend-dashboard
 
-verdict-publisher
+backend
 
 ```
 
@@ -426,7 +426,7 @@ The Kafka topic used by the platform is:
 
 ```text
 
-verdict-events
+cybreach.verdicts.v2
 
 ```
 
@@ -438,7 +438,7 @@ The verdict publisher consumer group is:
 
 ```text
 
-verdict-publisher-group
+verdict-consumers
 
 ```
 
@@ -530,7 +530,7 @@ The following topic should be present:
 
 ```text
 
-verdict-events
+cybreach.verdicts.v2
 
 ```
 
@@ -910,7 +910,7 @@ The verdict publisher is located at:
 
 ```text
 
-D:\\Validator Project\\verdict-platform\\verdict-publisher
+D:\\Validator Project\\verdict-platform\\backend
 
 ```
 
@@ -922,7 +922,7 @@ Navigate to the directory:
 
 ```cmd
 
-cd /d "D:\\Validator Project\\verdict-platform\\verdict-publisher"
+cd /d "D:\\Validator Project\\verdict-platform\\backend"
 
 ```
 
@@ -950,7 +950,7 @@ The publisher consumes events from:
 
 ```text
 
-verdict-events
+cybreach.verdicts.v2
 
 ```
 
@@ -962,7 +962,7 @@ using the consumer group:
 
 ```text
 
-verdict-publisher-group
+verdict-consumers
 
 ```
 
@@ -982,7 +982,7 @@ The publisher monitoring script is:
 
 ```text
 
-D:\\Validator Project\\verdict-platform\\verdict-publisher\\monitor.py
+D:\\Validator Project\\verdict-platform\\backend\\monitor.py
 
 ```
 
@@ -994,7 +994,7 @@ Run:
 
 ```cmd
 
-cd /d "D:\\Validator Project\\verdict-platform\\verdict-publisher"
+cd /d "D:\\Validator Project\\verdict-platform\\backend"
 
 python monitor.py
 
@@ -1010,9 +1010,9 @@ A healthy result should report zero Kafka consumer lag, for example:
 
 Kafka Consumer Monitoring
 
-Group: verdict-publisher-group
+Group: verdict-consumers
 
-Topic: verdict-events
+Topic: cybreach.verdicts.v2
 
 
 
@@ -1114,7 +1114,7 @@ Open another CMD window:
 
 ```cmd
 
-cd /d "D:\\Validator Project\\verdict-platform\\verdict-publisher"
+cd /d "D:\\Validator Project\\verdict-platform\\backend"
 
 python publisher.py
 
@@ -1180,7 +1180,7 @@ After startup, verify:
 
 \* \[ ] Kong container is running
 
-\* \[ ] Kafka topic `verdict-events` exists
+\* \[ ] Kafka topic `cybreach.verdicts.v2` exists
 
 \* \[ ] FastAPI backend starts successfully
 

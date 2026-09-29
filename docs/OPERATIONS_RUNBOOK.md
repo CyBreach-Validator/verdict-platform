@@ -106,7 +106,7 @@ D:\\Validator Project\\verdict-platform\\api-gateway
 
 ```text
 
-D:\\Validator Project\\verdict-platform\\verdict-publisher
+D:\\Validator Project\\verdict-platform\\backend
 
 ```
 
@@ -220,7 +220,7 @@ Open another CMD window:
 
 ```cmd
 
-cd /d "D:\\Validator Project\\verdict-platform\\verdict-publisher"
+cd /d "D:\\Validator Project\\verdict-platform\\backend"
 
 python publisher.py
 
@@ -428,7 +428,7 @@ The application topic should include:
 
 ```text
 
-verdict-events
+cybreach.verdicts.v2
 
 ```
 
@@ -466,7 +466,7 @@ The Verdict Publisher uses:
 
 Consumer Group:
 
-verdict-publisher-group
+verdict-consumers
 
 ```
 
@@ -478,7 +478,7 @@ Topic:
 
 ```text
 
-verdict-events
+cybreach.verdicts.v2
 
 ```
 
@@ -490,7 +490,7 @@ Run the monitoring script:
 
 ```cmd
 
-cd /d "D:\\Validator Project\\verdict-platform\\verdict-publisher"
+cd /d "D:\\Validator Project\\verdict-platform\\backend"
 
 python monitor.py
 
@@ -588,7 +588,7 @@ and starting it again:
 
 ```cmd
 
-cd /d "D:\\Validator Project\\verdict-platform\\verdict-publisher"
+cd /d "D:\\Validator Project\\verdict-platform\\backend"
 
 python publisher.py
 
@@ -1728,7 +1728,7 @@ Start the publisher:
 
 ```cmd
 
-cd /d "D:\\Validator Project\\verdict-platform\\verdict-publisher"
+cd /d "D:\\Validator Project\\verdict-platform\\backend"
 
 python publisher.py
 

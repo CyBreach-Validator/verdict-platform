@@ -14,8 +14,13 @@ from app.websocket.connection_manager import manager
 # B11: this endpoint runs a rule, writes a verdict and broadcasts it, and it
 # was reachable anonymously -- anyone could drive Delta's detection engine and
 # inject arbitrary rows.
+#
+# B13: the router used to set `prefix="/validator"`, so the mounted route was
+# POST /api/v2/validator/validate. The plan's endpoint list names
+# POST /api/v2/validate, and no /api/v2/validate string existed anywhere in the
+# repository. The prefix is removed so `include_router(..., prefix="/api/v2")`
+# in main.py yields the documented path.
 router = APIRouter(
-    prefix="/validator",
     tags=["Validator"],
     dependencies=[Depends(get_current_user)],
 )
