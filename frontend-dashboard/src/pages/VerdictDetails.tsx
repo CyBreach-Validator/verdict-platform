@@ -88,7 +88,11 @@ export default function VerdictDetailsPage() {
       case "partial":
         return "verdict-badge verdict-partial";
 
-      case "no data":
+      // M2: the canonical token is `NoData` (no space), so the lowercased
+      // value is `"nodata"`. This case used to read `"no data"`, which the
+      // canonical spelling can never produce, so every `NoData` verdict fell
+      // through to the unstyled default badge.
+      case "nodata":
         return "verdict-badge verdict-no-data";
 
       default:

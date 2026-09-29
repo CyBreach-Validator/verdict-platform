@@ -807,9 +807,15 @@ Missed
 
 Partial
 
-No Data
+NoData
 
 ```
+
+> M2: the canonical token is `NoData`, without a space. It is the value in the
+> frozen v2.0 schema and the value both publishers emit.
+> `normalize_verdict()` in `backend/app/contracts/verdict_event.py` still
+> accepts the legacy `"No Data"` on input so that older rows and clients keep
+> working, but that is an input-side compatibility alias, not a second token.
 
 
 
@@ -827,7 +833,7 @@ No Data
 
 | Missed   |     0 |
 
-| No Data  |     0 |
+| NoData   |     0 |
 
 
 

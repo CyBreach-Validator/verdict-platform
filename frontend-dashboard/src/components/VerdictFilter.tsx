@@ -22,7 +22,14 @@ function VerdictFilter({
         <option value="Detected">Detected</option>
         <option value="Missed">Missed</option>
         <option value="Partial">Partial</option>
-        <option value="No Data">No Data</option>
+        {/*
+          M2: the `value` is the token sent to the API, so it has to be the
+          canonical `NoData` that Delta emits and that its frozen schema
+          declares -- `validate_rule` normalizes the legacy `"No Data"`
+          spelling on input, but a filter built on the old spelling never
+          matched a stored row. The label stays spaced for readability.
+        */}
+        <option value="NoData">No Data</option>
       </select>
     </div>
   );
