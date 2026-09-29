@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database.database import get_db
@@ -6,7 +6,7 @@ from app.kafka.producer import publish_verdict
 from app.models.rule import Rule
 from app.schemas.validator import ValidationRequest
 from app.security.security import get_current_user
-from app.services.validator_service import validate_rule
+from app.services.validator_service import MalformedRuleQuery, validate_rule
 from app.services.verdict_service import save_verdict
 from app.utils.rule_hash_utils import compute_rule_id
 from app.websocket.connection_manager import manager
@@ -26,10 +26,20 @@ async def validate(
     request: ValidationRequest,
     db: Session = Depends(get_db)
 ):
-    result = validate_rule(
-        request.rule_query,
-        request.event
-    )
+    # m8: `validate_rule` raises `MalformedRuleQuery` for a rule query that
+    # cannot be evaluated at all (unparseable JSON, or JSON that is not an
+    # object). It was previously called bare, so a malformed `rule_query`
+    # escaped as an unhandled `ValueError` and the client received a 500 for
+    # what is a client-side input error. `MalformedRuleQuery` subclasses
+    # `ValueError`, and a 422 is what the service docstring already claimed
+    # this layer did.
+    try:
+        result = validate_rule(
+            request.rule_query,
+            request.event
+        )
+    except MalformedRuleQuery as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     # B4: this used to hardcode `rule_id=1` and `rule_name="Suspicious
     # PowerShell"`, so every ad-hoc validation in the platform was attributed
