@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package cybreach.services;
+
+option py_generic_services = true;
+
+service VerdictPublisherService {
+  rpc PublishVerdict(PublishVerdictRequest) returns (PublishVerdictResponse);
+  rpc HealthCheck(HealthRequest) returns (HealthResponse);
+}
+
+message HealthRequest {
+  string service_name = 1;
+}
+
+message HealthResponse {
+  string status = 1;
+  string service = 2;
+  int64 timestamp = 3;
+  string version = 4;
+}
+
+message PublishVerdictRequest {
+  string tenant_id = 1;
+  string action_id = 2;
+  string verdict_id = 3;
+  string verdict = 4;
+  double confidence = 5;
+  bytes normalized_event = 6;
+  repeated string regulatory_control_refs = 7;
+}
+
+message PublishVerdictResponse {
+  string verdict_id = 1;
+  string status = 2;
+  bool accepted = 3;
+  string error_detail = 4;
+}

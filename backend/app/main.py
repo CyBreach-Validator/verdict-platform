@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import threading
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -36,6 +37,18 @@ async def lifespan(app: FastAPI):
     """
 
     verify_schema(engine)
+
+    try:
+        from app.grpc_server import serve as serve_grpc
+
+        grpc_thread = threading.Thread(
+            target=lambda: serve_grpc(host="0.0.0.0", port=50055),
+            daemon=True,
+        )
+        grpc_thread.start()
+    except Exception:
+        pass
+
     yield
 
 
