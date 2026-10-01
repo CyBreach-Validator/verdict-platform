@@ -25,6 +25,13 @@ class RuleUpdate(BaseModel):
 
 class RuleResponse(BaseModel):
     id: int
+
+    # `id` is the surrogate primary key and is not usable across pods. `rule_id`
+    # is the canonical content hash that `verdict_events.rule_id` joins on, so a
+    # caller had no way to learn the id its verdicts will be filed under: the
+    # response omitted it entirely. Exposed here so a rule can be created and
+    # then referenced by the exact id that validation resolves.
+    rule_id: Optional[str] = None
     rule_name: str
     rule_type: str
     severity: str

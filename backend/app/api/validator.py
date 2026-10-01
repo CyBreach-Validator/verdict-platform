@@ -26,6 +26,33 @@ router = APIRouter(
 )
 
 
+def derive_rule_id(request: ValidationRequest) -> str:
+    """The canonical content hash this validation attributes its verdict to.
+
+    `compute_rule_id` hashes rule_name + query + rule_type + mitre_technique,
+    which is exactly what `create_rule` passes when it stores a rule. This used
+    to be inlined as
+    `compute_rule_id(rule_name=request.action_id, query=request.rule_query)`,
+    which hashed the *action id* as the rule name and omitted two components, so
+    the digest could never equal any stored `rules.rule_id`.
+
+    Extracted so the four-field contract is testable directly rather than being
+    reimplemented in a test (a reimplementation keeps passing after a
+    regression).
+    """
+    return compute_rule_id(
+        rule_name=request.rule_name or request.action_id,
+        query=request.rule_query,
+        rule_type=request.rule_type,
+        mitre_technique=request.mitre_technique,
+    )
+
+
+def resolve_rule(db: Session, rule_id: str):
+    """Return the stored `rules` row for a canonical id, or None."""
+    return db.query(Rule).filter(Rule.rule_id == rule_id).first()
+
+
 @router.post("/validate")
 async def validate(
     request: ValidationRequest,
@@ -51,18 +78,28 @@ async def validate(
     # to rule 1 and could not be joined to a rule at all. Derive the canonical
     # content hash instead: the same rule body then resolves to the same
     # `rule_id` on every pod, and to the stored row if Delta already has it.
-    rule_id = compute_rule_id(
-        rule_name=request.action_id,
-        query=request.rule_query,
-    )
+    # See `derive_rule_id` for the four fields it hashes over.
+    rule_id = derive_rule_id(request)
 
-    rule = (
-        db.query(Rule)
-        .filter(Rule.rule_id == rule_id)
-        .first()
-    )
+    rule = resolve_rule(db, rule_id)
 
-    regulatory_control_refs = rule.regulatory_control_refs if rule else []
+    # A missing rule row used to fall through to `save_verdict`, which then
+    # raised IntegrityError and surfaced as an opaque HTTP 500. Say what is
+    # actually wrong instead: `verdict_events.rule_id` is a foreign key, so a
+    # verdict cannot exist without the rule it came from.
+    if rule is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"No stored rule matches this validation "
+                f"(rule_id={rule_id}). Create the rule first via "
+                f"POST /api/v2/rules, or pass the same rule_name, rule_type "
+                f"and mitre_technique that were used to create it -- the rule_id "
+                f"is a content hash over exactly those fields."
+            ),
+        )
+
+    regulatory_control_refs = rule.regulatory_control_refs
 
     # N-D11: `save_verdict` returns the one canonical v2.0 payload it persisted
     # from. The old code hand-built a *fourth* shape here -- it divided
@@ -76,7 +113,7 @@ async def validate(
         db=db,
         action_id=request.action_id,
         rule_id=rule_id,
-        rule_name=rule.rule_name if rule else request.action_id,
+        rule_name=rule.rule_name,
         verdict=result["status"],
         confidence=result["confidence"],
         event=request.event,
