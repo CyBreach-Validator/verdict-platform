@@ -41,7 +41,7 @@ def _database_url() -> str:
     """Resolve the migration URL from the environment.
 
     M7/m7: `alembic.ini` shipped a literal
-    `postgresql://validator:validator_dev_pw@localhost:5432/module2_validator`
+    `postgresql://validator:<redacted>@localhost:5432/<db>`
     in the repository, so the migration target was a real credential committed
     to source, pointed at a database name that no longer matches
     `.env.example`, and silently overrode whatever DATABASE_URL the operator
